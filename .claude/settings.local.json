@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(git config *)",
+      "Bash(winget install *)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" --version)"
+    ]
+  }
+}
