@@ -56,6 +56,7 @@ class RayModpackPage : public QWidget {
 
    private:
     void rebuildTiles();
+    void addTile(const RayModpack& pack, RayModpackCard::State state, const QString& instanceId);
     void setStatus(const QString& text, bool isError);
     QString installedInstanceIdFor(const RayModpack& pack) const;
     void fetchIcon(RayModpackCard* card, const QUrl& url);

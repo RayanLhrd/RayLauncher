@@ -21,6 +21,7 @@
 #include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSet>
 #include <QVBoxLayout>
 
 #include "Application.h"
@@ -150,37 +151,69 @@ void RayModpackPage::rebuildTiles()
         delete item;
     }
 
-    const auto& packs = m_fetcher->modpacks();
-    for (const RayModpack& pack : packs) {
+    // Pass 1 — catalogue tiles. Keep track of which instances got matched so we don't show
+    // them twice in pass 2.
+    QSet<QString> matchedInstanceIds;
+    for (const RayModpack& pack : m_fetcher->modpacks()) {
         const QString instId = installedInstanceIdFor(pack);
-        const RayModpackCard::State state = instId.isEmpty() ? RayModpackCard::State::Available : RayModpackCard::State::Installed;
-
-        auto* card = new RayModpackCard(pack, state, instId, m_tilesContainer);
-        connect(card, &RayModpackCard::installClicked, this, &RayModpackPage::installRequested);
-        connect(card, &RayModpackCard::playClicked, this, &RayModpackPage::playRequested);
-        connect(card, &RayModpackCard::killClicked, this, &RayModpackPage::killRequested);
-        connect(card, &RayModpackCard::updateClicked, this, &RayModpackPage::updateRequested);
-        connect(card, &RayModpackCard::contextMenuRequested, this, &RayModpackPage::onCardContextMenu);
-
-        // For installed instances, pick up the initial running state and subscribe to future changes
-        // so the button flips between "Jouer" and "Arrêter" without the user having to refresh.
-        if (!instId.isEmpty()) {
-            InstancePtr inst = APPLICATION->instances()->getInstanceById(instId);
-            if (inst) {
-                card->setRunning(inst->isRunning());
-                connect(inst.get(), &BaseInstance::runningStatusChanged, card,
-                        [card](bool running) { card->setRunning(running); });
-            }
-        }
-
-        if (m_iconCache.contains(pack.id) && !m_iconCache.value(pack.id).isNull()) {
-            card->setIcon(m_iconCache.value(pack.id));
-        } else if (!pack.iconUrl.isEmpty()) {
-            fetchIcon(card, pack.iconUrl);
-        }
-
-        m_tilesLayout->addWidget(card);
+        if (!instId.isEmpty())
+            matchedInstanceIds.insert(instId);
+        const auto state = instId.isEmpty() ? RayModpackCard::State::Available : RayModpackCard::State::Installed;
+        addTile(pack, state, instId);
     }
+
+    // Pass 2 — user-added tiles. Any instance that doesn't correspond to a catalogue entry gets
+    // its own tile in the same grid, with an empty synthetic RayModpack (empty id flags it as
+    // "not from the catalogue"). Because the instance has no RayLauncher_ModpackId setting, the
+    // context-menu delete guard lets the user remove it.
+    auto list = APPLICATION->instances();
+    for (int i = 0; i < list->count(); ++i) {
+        InstancePtr inst = list->at(i);
+        if (!inst)
+            continue;
+        if (matchedInstanceIds.contains(inst->id()))
+            continue;
+
+        RayModpack synthetic;
+        synthetic.name = inst->name();
+        synthetic.description = tr("Ajoutée manuellement");
+        // id/version/iconUrl/mrpackUrl stay empty — the card treats this as a plain Installed tile.
+
+        addTile(synthetic, RayModpackCard::State::Installed, inst->id());
+    }
+}
+
+void RayModpackPage::addTile(const RayModpack& pack, RayModpackCard::State state, const QString& instanceId)
+{
+    auto* card = new RayModpackCard(pack, state, instanceId, m_tilesContainer);
+    connect(card, &RayModpackCard::installClicked, this, &RayModpackPage::installRequested);
+    connect(card, &RayModpackCard::playClicked, this, &RayModpackPage::playRequested);
+    connect(card, &RayModpackCard::killClicked, this, &RayModpackPage::killRequested);
+    connect(card, &RayModpackCard::updateClicked, this, &RayModpackPage::updateRequested);
+    connect(card, &RayModpackCard::contextMenuRequested, this, &RayModpackPage::onCardContextMenu);
+
+    // For installed instances, pick up the initial running state and subscribe to future changes
+    // so the button flips between "Jouer" and "Arrêter" without the user having to refresh.
+    if (!instanceId.isEmpty()) {
+        InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+        if (inst) {
+            card->setRunning(inst->isRunning());
+            connect(inst.get(), &BaseInstance::runningStatusChanged, card,
+                    [card](bool running) { card->setRunning(running); });
+        }
+    }
+
+    // Icon resolution order: cached (catalogue pack previously fetched) → URL (catalogue pack,
+    // first time) → app logo (user-added tile or catalogue pack with no icon_url).
+    if (!pack.id.isEmpty() && m_iconCache.contains(pack.id) && !m_iconCache.value(pack.id).isNull()) {
+        card->setIcon(m_iconCache.value(pack.id));
+    } else if (!pack.iconUrl.isEmpty()) {
+        fetchIcon(card, pack.iconUrl);
+    } else {
+        card->setIcon(APPLICATION->logo().pixmap(128, 128));
+    }
+
+    m_tilesLayout->addWidget(card);
 }
 
 void RayModpackPage::fetchIcon(RayModpackCard* card, const QUrl& url)
