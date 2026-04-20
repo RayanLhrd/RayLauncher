@@ -47,6 +47,7 @@
 #include "ui/dialogs/ProfileSelectDialog.h"
 #include "ui/dialogs/ProfileSetupDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
+#include "ui/dialogs/RaySimpleProgressDialog.h"
 
 #include <QHostAddress>
 #include <QHostInfo>
@@ -308,8 +309,9 @@ void LaunchController::login()
             /* fallthrough */
             case AccountState::Working: {
                 // refresh is in progress, we need to wait for it to finish to proceed.
-                ProgressDialog progDialog(m_parentWidget);
-                progDialog.setSkipButton(true, tr("Abort"));
+                RaySimpleProgressDialog progDialog(m_parentWidget);
+                progDialog.setWindowTitle(tr("Connexion"));
+                progDialog.setHeadline(tr("Vérification du compte…"));
 
                 auto task = accountToCheck->currentTask();
                 progDialog.execWithTask(task.get());
@@ -490,8 +492,9 @@ void LaunchController::onFailed(QString reason)
 
 void LaunchController::onProgressRequested(Task* task)
 {
-    ProgressDialog progDialog(m_parentWidget);
-    progDialog.setSkipButton(true, tr("Abort"));
+    RaySimpleProgressDialog progDialog(m_parentWidget);
+    progDialog.setWindowTitle(tr("Préparation du jeu"));
+    progDialog.setHeadline(tr("Préparation du jeu…"));
     m_launcher->proceed();
     progDialog.execWithTask(task);
 }

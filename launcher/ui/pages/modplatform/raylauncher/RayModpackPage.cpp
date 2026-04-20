@@ -158,8 +158,20 @@ void RayModpackPage::rebuildTiles()
         auto* card = new RayModpackCard(pack, state, instId, m_tilesContainer);
         connect(card, &RayModpackCard::installClicked, this, &RayModpackPage::installRequested);
         connect(card, &RayModpackCard::playClicked, this, &RayModpackPage::playRequested);
+        connect(card, &RayModpackCard::killClicked, this, &RayModpackPage::killRequested);
         connect(card, &RayModpackCard::updateClicked, this, &RayModpackPage::updateRequested);
         connect(card, &RayModpackCard::contextMenuRequested, this, &RayModpackPage::onCardContextMenu);
+
+        // For installed instances, pick up the initial running state and subscribe to future changes
+        // so the button flips between "Jouer" and "Arrêter" without the user having to refresh.
+        if (!instId.isEmpty()) {
+            InstancePtr inst = APPLICATION->instances()->getInstanceById(instId);
+            if (inst) {
+                card->setRunning(inst->isRunning());
+                connect(inst.get(), &BaseInstance::runningStatusChanged, card,
+                        [card](bool running) { card->setRunning(running); });
+            }
+        }
 
         if (m_iconCache.contains(pack.id) && !m_iconCache.value(pack.id).isNull()) {
             card->setIcon(m_iconCache.value(pack.id));

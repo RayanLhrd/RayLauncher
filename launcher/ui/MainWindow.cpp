@@ -299,6 +299,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_modpackPage = new RayModpackPage(ui->centralWidget);
     connect(m_modpackPage, &RayModpackPage::installRequested, this, &MainWindow::installRayModpack);
     connect(m_modpackPage, &RayModpackPage::playRequested, this, &MainWindow::playRayInstance);
+    connect(m_modpackPage, &RayModpackPage::killRequested, this, [](const QString& instanceId) {
+        InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+        if (inst && inst->isRunning())
+            APPLICATION->kill(inst);
+    });
     connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
     connect(m_modpackPage, &RayModpackPage::openFolderRequested, this, [](const QString& instanceId) {
         InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);

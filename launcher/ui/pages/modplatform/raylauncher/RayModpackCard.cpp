@@ -92,26 +92,43 @@ void RayModpackCard::applyState()
         existing->deleteLater();
     }
 
-    switch (m_state) {
-        case State::Available: {
-            auto* eff = new QGraphicsOpacityEffect(m_iconLabel);
-            eff->setOpacity(0.55);
-            m_iconLabel->setGraphicsEffect(eff);
-            m_actionButton->setText(tr("Installer"));
-            m_actionButton->setObjectName("installButton");
-            break;
+    // The running overlay takes precedence over the base state — if the matching instance is
+    // currently running, the button reads "Arrêter" regardless of install/update status.
+    if (m_running) {
+        m_actionButton->setText(tr("Arrêter"));
+        m_actionButton->setObjectName("killButton");
+        m_actionButton->setStyleSheet("QPushButton#killButton { background-color: #c23b22; color: white; }");
+    } else {
+        m_actionButton->setStyleSheet(QString());
+        switch (m_state) {
+            case State::Available: {
+                auto* eff = new QGraphicsOpacityEffect(m_iconLabel);
+                eff->setOpacity(0.55);
+                m_iconLabel->setGraphicsEffect(eff);
+                m_actionButton->setText(tr("Installer"));
+                m_actionButton->setObjectName("installButton");
+                break;
+            }
+            case State::Installed:
+                m_actionButton->setText(tr("Jouer"));
+                m_actionButton->setObjectName("playButton");
+                break;
+            case State::UpdateAvailable:
+                m_actionButton->setText(tr("Mettre à jour"));
+                m_actionButton->setObjectName("updateButton");
+                break;
         }
-        case State::Installed:
-            m_actionButton->setText(tr("Jouer"));
-            m_actionButton->setObjectName("playButton");
-            break;
-        case State::UpdateAvailable:
-            m_actionButton->setText(tr("Mettre à jour"));
-            m_actionButton->setObjectName("updateButton");
-            break;
     }
     m_actionButton->style()->unpolish(m_actionButton);
     m_actionButton->style()->polish(m_actionButton);
+}
+
+void RayModpackCard::setRunning(bool running)
+{
+    if (m_running == running)
+        return;
+    m_running = running;
+    applyState();
 }
 
 void RayModpackCard::setIcon(const QPixmap& pixmap)
@@ -122,6 +139,10 @@ void RayModpackCard::setIcon(const QPixmap& pixmap)
 
 void RayModpackCard::onActionButtonClicked()
 {
+    if (m_running) {
+        emit killClicked(m_instanceId);
+        return;
+    }
     switch (m_state) {
         case State::Available:
             emit installClicked(m_pack);

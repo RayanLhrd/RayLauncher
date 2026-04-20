@@ -45,15 +45,23 @@ class RayModpackCard : public QFrame {
     const RayModpack& pack() const { return m_pack; }
     State state() const { return m_state; }
     const QString& instanceId() const { return m_instanceId; }
+    bool isRunning() const { return m_running; }
 
     /// Replace the icon (used when the async icon fetch resolves).
     void setIcon(const QPixmap& pixmap);
 
+    /// Toggle the "Minecraft is currently running for this instance" overlay. The action button
+    /// becomes a red "Arrêter" button that emits killClicked instead of playClicked.
+    /// Only meaningful when state == Installed.
+    void setRunning(bool running);
+
    signals:
     /// Fired when the user wants to install the pack (state == Available).
     void installClicked(const RayModpack& pack);
-    /// Fired when the user wants to launch the matching instance (state == Installed).
+    /// Fired when the user wants to launch the matching instance (state == Installed, not running).
     void playClicked(const QString& instanceId);
+    /// Fired when the user wants to kill a running instance (state == Installed, running).
+    void killClicked(const QString& instanceId);
     /// Fired when the user wants to update the matching instance (state == UpdateAvailable, future).
     void updateClicked(const RayModpack& pack, const QString& instanceId);
     /// Fired when the tile receives a right-click. globalPos is pre-computed from QContextMenuEvent.
@@ -71,6 +79,7 @@ class RayModpackCard : public QFrame {
     RayModpack m_pack;
     State m_state;
     QString m_instanceId;
+    bool m_running = false;
 
     QLabel* m_iconLabel = nullptr;
     QLabel* m_nameLabel = nullptr;

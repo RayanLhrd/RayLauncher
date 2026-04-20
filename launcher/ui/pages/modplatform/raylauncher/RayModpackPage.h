@@ -40,6 +40,7 @@ class RayModpackPage : public QWidget {
    signals:
     void installRequested(const RayModpack& pack);
     void playRequested(const QString& instanceId);
+    void killRequested(const QString& instanceId);
     void updateRequested(const RayModpack& pack, const QString& instanceId);
     /// Open the instance directory in the system file explorer.
     void openFolderRequested(const QString& instanceId);
