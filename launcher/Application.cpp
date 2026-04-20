@@ -1549,7 +1549,16 @@ std::shared_ptr<DiscordIntegration> Application::discord()
 
 QIcon Application::logo()
 {
-    return QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
+    // Prefer the multi-resolution ICO baked into the qrc — Qt's SVG renderer was struggling
+    // to rasterize our base64-embedded PNG wrapper at small sizes (16×16 / 32×32 for the
+    // Windows taskbar), which left the running app showing the OS default icon. The ICO
+    // already carries pre-rendered bitmaps at 16/32/48/64/128/256, so QIcon picks the
+    // correct size without having to rasterize anything. Fall back to the SVG on platforms
+    // where the ICO handler isn't available.
+    QIcon icon(":/logo.ico");
+    if (icon.isNull())
+        icon = QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
+    return icon;
 }
 
 bool Application::openJsonEditor(const QString& filename)

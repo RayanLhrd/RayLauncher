@@ -31,7 +31,10 @@
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --repo RayanLhrd/RayLauncher --limit 1 --json databaseId,conclusion,displayTitle,headSha --jq '.[0]')",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-43c62a7\")",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-3513166\")",
-      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-94a673d\")"
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-94a673d\")",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-64f798b\")",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --repo RayanLhrd/RayLauncher --limit 3)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-b08cd6d\")"
     ]
   }
 }

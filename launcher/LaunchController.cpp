@@ -507,13 +507,8 @@ bool LaunchController::abort()
     if (!m_launcher->canAbort()) {
         return false;
     }
-    auto response = CustomMessageBox::selectable(m_parentWidget, tr("Kill Minecraft?"),
-                                                 tr("This can cause the instance to get corrupted and should only be used if Minecraft "
-                                                    "is frozen for some reason"),
-                                                 QMessageBox::Question, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes)
-                        ->exec();
-    if (response == QMessageBox::Yes) {
-        return m_launcher->abort();
-    }
-    return false;
+    // RayLauncher: the "Kill Minecraft?" confirmation dialog was removed on purpose. The card's
+    // Arrêter button is already an explicit, deliberate click — adding a confirmation on top
+    // felt like a speed-bump without safety value. If the user clicks it, they mean it.
+    return m_launcher->abort();
 }
