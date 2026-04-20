@@ -67,7 +67,6 @@
 #include <QProgressDialog>
 #include <QShortcut>
 #include <QStatusBar>
-#include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
 #include <QWidget>
@@ -291,21 +290,27 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         updateNewsLabel();
     }
 
-    // Create the main tabbed central area: Modpacks (default tab) + Mes Instances (existing view).
-    // The Modpacks tab is the friend-facing landing: a curated list of the user's own modpacks
-    // from their RayLauncher catalogue (index.json on GitHub). "Mes Instances" keeps the
-    // classic Prism/Freesm instance grid for everything else.
-    m_mainTabs = new QTabWidget(ui->centralWidget);
-    m_mainTabs->setDocumentMode(true);
-    m_mainTabs->setTabPosition(QTabWidget::North);
-
-    m_modpackPage = new RayModpackPage(m_mainTabs);
+    // RayLauncher central widget: the Modpacks page is the ONLY visible view.
+    // The legacy InstanceView is still constructed below so instance-selection state, keyboard
+    // shortcuts, and the instance-specific toolbar actions still have something to bind to —
+    // but it's not added to any layout, so users never see the old grid. They install and play
+    // exclusively through the Modpacks cards.
+    m_modpackPage = new RayModpackPage(ui->centralWidget);
     connect(m_modpackPage, &RayModpackPage::installRequested, this, &MainWindow::installRayModpack);
-    m_mainTabs->addTab(m_modpackPage, tr("Modpacks"));
+    connect(m_modpackPage, &RayModpackPage::playRequested, this, &MainWindow::playRayInstance);
+    connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
+    ui->horizontalLayout->addWidget(m_modpackPage);
 
-    // Create the instance list widget
+    // Hide the right-side instance toolbar — its actions (Launch, Edit, Delete, ...) operate
+    // on a selected instance from the InstanceView, which is no longer visible.
+    if (ui->instanceToolBar)
+        ui->instanceToolBar->hide();
+
+    // Create the instance list widget (offscreen — kept for compatibility with other code paths
+    // that still reference `view`, `proxymodel`, and the selection model).
     {
-        view = new InstanceView(m_mainTabs);
+        view = new InstanceView(this);
+        view->hide();
 
         view->setSelectionMode(QAbstractItemView::SingleSelection);
         // FIXME: leaks ListViewDelegate
@@ -345,12 +350,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances().get(), &InstanceList::on_GroupStateChanged);
-        m_mainTabs->addTab(view, tr("Mes Instances"));
+        // Not added to any layout — the Modpacks page is the sole visible central widget.
     }
-
-    // Modpacks is the default landing tab for a fresh install.
-    m_mainTabs->setCurrentIndex(0);
-    ui->horizontalLayout->addWidget(m_mainTabs);
     // The cat background
     {
         // set the cat action priority here so you can still see the action in qt designer
@@ -961,6 +962,23 @@ void MainWindow::installRayModpack(const RayModpack& pack)
     if (!groupName.isEmpty())
         task->setGroup(groupName);
     instanceFromInstanceTask(task);
+}
+
+void MainWindow::playRayInstance(const QString& instanceId)
+{
+    InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+    if (!inst)
+        return;
+    if (inst->isRunning())
+        return;  // nothing to do — already running
+    APPLICATION->launch(inst);
+}
+
+void MainWindow::updateRayModpack(const RayModpack& /*pack*/, const QString& /*instanceId*/)
+{
+    // Wired up for RayModpackCard::updateClicked but not yet triggered — the card only enters
+    // the UpdateAvailable state once we store the installed pack's version in instance.cfg,
+    // which arrives in the next commit alongside the keybind-preserving re-import task.
 }
 
 void MainWindow::processURLs(QList<QUrl> urls)

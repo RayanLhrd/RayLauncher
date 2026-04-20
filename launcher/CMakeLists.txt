@@ -1111,6 +1111,8 @@ SET(LAUNCHER_SOURCES
     ui/pages/modplatform/modrinth/ModrinthModel.cpp
     ui/pages/modplatform/modrinth/ModrinthModel.h
 
+    ui/pages/modplatform/raylauncher/RayModpackCard.cpp
+    ui/pages/modplatform/raylauncher/RayModpackCard.h
     ui/pages/modplatform/raylauncher/RayModpackPage.cpp
     ui/pages/modplatform/raylauncher/RayModpackPage.h
 

@@ -52,7 +52,6 @@
 class LaunchController;
 class NewsChecker;
 class QToolButton;
-class QTabWidget;
 class InstanceProxyModel;
 class LabeledToolButton;
 class QLabel;
@@ -235,11 +234,12 @@ class MainWindow : public QMainWindow {
     void runModalTask(Task* task);
     void instanceFromInstanceTask(InstanceTask* task);
     void installRayModpack(const RayModpack& pack);
+    void playRayInstance(const QString& instanceId);
+    void updateRayModpack(const RayModpack& pack, const QString& instanceId);
 
    private:
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
-    QTabWidget* m_mainTabs = nullptr;
     RayModpackPage* m_modpackPage = nullptr;
     InstanceView* view = nullptr;
     InstanceProxyModel* proxymodel = nullptr;

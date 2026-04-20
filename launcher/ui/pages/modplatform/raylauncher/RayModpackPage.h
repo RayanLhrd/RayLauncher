@@ -6,38 +6,33 @@
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, version 3.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 #pragma once
 
+#include <QHash>
 #include <QWidget>
-#include <optional>
 
 #include "modplatform/raylauncher/RayModpackIndex.h"
+#include "ui/pages/modplatform/raylauncher/RayModpackCard.h"
 
 class QLabel;
-class QListWidget;
-class QListWidgetItem;
 class QPushButton;
+class QScrollArea;
+class QVBoxLayout;
 
 /**
- * @brief The primary "Modpacks" tab shown in MainWindow on startup.
+ * @brief The primary "Modpacks" central widget shown in MainWindow.
  *
- * Fetches the RayLauncher modpack catalogue (BuildConfig.RAYLAUNCHER_MODPACK_INDEX_URL),
- * renders each pack as an item in a QListWidget (icon + name), and emits @ref installRequested
- * when the user triggers an install. The actual InstanceImportTask plumbing lives in MainWindow
- * so this widget stays free of app-wide side effects.
+ * Fetches the RayLauncher catalogue (BuildConfig.RAYLAUNCHER_MODPACK_INDEX_URL) on construction
+ * and renders one RayModpackCard per pack. Each card's state (Available / Installed) is resolved
+ * by matching the catalogue entry's `name` against the user's installed instances — if a matching
+ * instance exists, the card switches to Installed and its action button becomes "Jouer". Name-
+ * based matching is a deliberate v1 simplification; proper tagging via an `RayLauncher_ModpackId`
+ * setting on the instance is scheduled for the next commit together with the Update flow.
  *
- * For Commit 1 this is deliberately minimal — richer card rendering (state badges, descriptions,
- * Play/Update states) ships in subsequent commits.
+ * Actions are emitted as signals so MainWindow wires them into its existing task machinery
+ * without this widget needing to know about InstanceImportTask / Application::launch.
  */
 class RayModpackPage : public QWidget {
     Q_OBJECT
@@ -46,28 +41,30 @@ class RayModpackPage : public QWidget {
     ~RayModpackPage() override;
 
    signals:
-    /// Emitted when the user confirms they want to install a specific modpack.
     void installRequested(const RayModpack& pack);
+    void playRequested(const QString& instanceId);
+    void updateRequested(const RayModpack& pack, const QString& instanceId);
 
    private slots:
     void onIndexLoaded();
     void onIndexFailed(QString error);
-    void onSelectionChanged();
     void onRefreshClicked();
-    void onInstallClicked();
-    void onItemDoubleClicked(QListWidgetItem* item);
+    void onInstanceListChanged();
 
    private:
-    void setStatus(const QString& statusText, bool isError);
-    void rebuildList();
-    void fetchIconFor(QListWidgetItem* item, const QUrl& url);
-    std::optional<RayModpack> currentModpack() const;
+    void rebuildCards();
+    void setStatus(const QString& text, bool isError);
+    QString installedInstanceIdFor(const RayModpack& pack) const;
+    void fetchIcon(RayModpackCard* card, const QUrl& url);
 
     RayModpackIndexFetcher* m_fetcher = nullptr;
 
     QLabel* m_statusLabel = nullptr;
-    QListWidget* m_list = nullptr;
-    QLabel* m_descriptionLabel = nullptr;
-    QPushButton* m_installButton = nullptr;
     QPushButton* m_refreshButton = nullptr;
+    QScrollArea* m_scrollArea = nullptr;
+    QWidget* m_cardsContainer = nullptr;
+    QVBoxLayout* m_cardsLayout = nullptr;
+
+    // Kept so we can re-attach icons after a rebuild without redownloading — keyed by pack id.
+    QHash<QString, QPixmap> m_iconCache;
 };

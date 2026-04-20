@@ -15,7 +15,19 @@
       "Read(//c/Users/Rayan/Downloads/**)",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download 24662921652 --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-e6b57b1\")",
       "Read(//c/Users/Rayan/Documents/**)",
-      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Rayan\\\\AppData\\\\Local\\\\Temp\\\\make_icons.ps1\")"
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Rayan\\\\AppData\\\\Local\\\\Temp\\\\make_icons.ps1\")",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --limit 1)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/raylauncher-modpacks/contents\" --jq '.[].name')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/raylauncher-modpacks/contents/index.json\" --jq '.download_url')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" repo list RayanLhrd --limit 20 --json name,isPrivate,updatedAt --jq '.[] | \"\\\\\\(.name\\)\\\\t\\\\\\(.isPrivate\\)\\\\t\\\\\\(.updatedAt\\)\"')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/raylauncher-modpacks/branches\" --jq '.[].name')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/raylauncher-modpacks\" --jq '{default_branch, size, pushed_at}')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --repo RayanLhrd/RayLauncher --limit 1)",
+      "Bash(git lfs *)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run view 24669147320 --json jobs --jq '.jobs[].steps[] | select\\(.conclusion == \"failure\"\\) | {name: .name}')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/RayLauncher/actions/runs/24669147320/artifacts\" --jq '.artifacts[] | \"\\\\\\(.name\\)\\\\t\\\\\\(.size_in_bytes / 1048576 | floor\\) MB\"')",
+      "Bash(rm -f RayLauncher-Setup.exe)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download 24669147320 --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-0753162\")"
     ]
   }
 }
