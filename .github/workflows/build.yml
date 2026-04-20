@@ -22,6 +22,11 @@ jobs:
       INSTALL_PORTABLE_DIR: install-portable
       BUILD_DIR: build
       BUILD_TYPE: Release
+      # These two are read by CMakePresets.json via $penv{...}.
+      # ARTIFACT_NAME being non-empty is what makes CMakeLists.txt enable the updater binary,
+      # which NSIS expects to find when packaging (raylauncher_updater.exe).
+      ARTIFACT_NAME: Windows-MSVC-Qt6
+      BUILD_PLATFORM: official
 
     steps:
       - name: Checkout
