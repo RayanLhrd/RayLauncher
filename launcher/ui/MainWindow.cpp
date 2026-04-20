@@ -67,6 +67,7 @@
 #include <QProgressDialog>
 #include <QShortcut>
 #include <QStatusBar>
+#include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
 #include <QWidget>
@@ -102,7 +103,7 @@
 #include "ui/dialogs/IconPickerDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
-#include "ui/pages/modplatform/raylauncher/RayModpackDialog.h"
+#include "ui/pages/modplatform/raylauncher/RayModpackPage.h"
 #include "InstanceImportTask.h"
 #include "ui/dialogs/NewsDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
@@ -290,9 +291,21 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         updateNewsLabel();
     }
 
+    // Create the main tabbed central area: Modpacks (default tab) + Mes Instances (existing view).
+    // The Modpacks tab is the friend-facing landing: a curated list of the user's own modpacks
+    // from their RayLauncher catalogue (index.json on GitHub). "Mes Instances" keeps the
+    // classic Prism/Freesm instance grid for everything else.
+    m_mainTabs = new QTabWidget(ui->centralWidget);
+    m_mainTabs->setDocumentMode(true);
+    m_mainTabs->setTabPosition(QTabWidget::North);
+
+    m_modpackPage = new RayModpackPage(m_mainTabs);
+    connect(m_modpackPage, &RayModpackPage::installRequested, this, &MainWindow::installRayModpack);
+    m_mainTabs->addTab(m_modpackPage, tr("Modpacks"));
+
     // Create the instance list widget
     {
-        view = new InstanceView(ui->centralWidget);
+        view = new InstanceView(m_mainTabs);
 
         view->setSelectionMode(QAbstractItemView::SingleSelection);
         // FIXME: leaks ListViewDelegate
@@ -332,8 +345,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances().get(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        m_mainTabs->addTab(view, tr("Mes Instances"));
     }
+
+    // Modpacks is the default landing tab for a fresh install.
+    m_mainTabs->setCurrentIndex(0);
+    ui->horizontalLayout->addWidget(m_mainTabs);
     // The cat background
     {
         // set the cat action priority here so you can still see the action in qt designer
@@ -930,15 +947,13 @@ void MainWindow::on_actionAddInstance_triggered()
 
 void MainWindow::on_actionMyModpacks_triggered()
 {
-    RayModpackDialog dlg(this);
-    if (dlg.exec() != QDialog::Accepted)
-        return;
+    // The toolbar action just surfaces the Modpacks tab — no popup anymore.
+    if (m_mainTabs)
+        m_mainTabs->setCurrentIndex(0);
+}
 
-    auto selected = dlg.selectedModpack();
-    if (!selected.has_value())
-        return;
-
-    const RayModpack& pack = *selected;
+void MainWindow::installRayModpack(const RayModpack& pack)
+{
     QString groupName = APPLICATION->settings()->get("LastUsedGroupForNewInstance").toString();
 
     auto* task = new InstanceImportTask(pack.mrpackUrl, this);

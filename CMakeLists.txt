@@ -192,6 +192,9 @@ set(Launcher_BUILD_PLATFORM "unknown" CACHE STRING "A short string identifying t
 # Github repo URL with releases for updater
 set(Launcher_UPDATER_GITHUB_REPO "https://github.com/RayanLhrd/RayLauncher" CACHE STRING "Base github URL for the updater.")
 
+# URL of the RayLauncher curated modpack catalogue (index.json). Fetched at runtime by the "Modpacks" tab.
+set(Launcher_RAYLAUNCHER_MODPACK_INDEX_URL "https://raw.githubusercontent.com/RayanLhrd/raylauncher-modpacks/main/index.json" CACHE STRING "URL of the RayLauncher modpack index JSON.")
+
 # Name to help updater identify valid artifacts
 set(Launcher_BUILD_ARTIFACT "" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
 

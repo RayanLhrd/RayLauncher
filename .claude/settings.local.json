@@ -5,7 +5,17 @@
       "Bash(gh --version)",
       "Bash(git config *)",
       "Bash(winget install *)",
-      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" --version)"
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" --version)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --limit 2)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --limit 3)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --limit 1 --json databaseId,conclusion,displayTitle,headSha)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run view --json jobs --jq '.jobs[].steps[] | select\\(.conclusion != \"success\"\\) | {name: .name, conclusion: .conclusion}')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run view 24662921652 --json jobs --jq '.jobs[].steps[] | {name: .name, conclusion: .conclusion}')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/RayLauncher/actions/runs/24662921652/artifacts\" --jq '.artifacts[] | {name: .name, size_mb: \\(.size_in_bytes / 1048576 | floor\\), url: .archive_download_url}')",
+      "Read(//c/Users/Rayan/Downloads/**)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download 24662921652 --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-e6b57b1\")",
+      "Read(//c/Users/Rayan/Documents/**)",
+      "Bash(powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Rayan\\\\AppData\\\\Local\\\\Temp\\\\make_icons.ps1\")"
     ]
   }
 }

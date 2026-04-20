@@ -16,35 +16,31 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "RayModpackDialog.h"
+#include "RayModpackPage.h"
 
-#include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QLabel>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QPixmap>
 #include <QPushButton>
 #include <QStyle>
 #include <QVBoxLayout>
-#include <QVariant>
 
 #include "Application.h"
 #include "BuildConfig.h"
 
 namespace {
 constexpr int kIconSize = 96;
-const char* kModpackIdRole = "raylauncher/modpack_id";
 }  // namespace
 
-RayModpackDialog::RayModpackDialog(QWidget* parent) : QDialog(parent)
+RayModpackPage::RayModpackPage(QWidget* parent) : QWidget(parent)
 {
-    setWindowTitle(tr("Mes Modpacks"));
-    resize(640, 480);
-
     auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(12, 12, 12, 12);
 
     auto* header = new QLabel(tr("Choisis un modpack à installer. Un clic suffit."), this);
     root->addWidget(header);
@@ -55,7 +51,7 @@ RayModpackDialog::RayModpackDialog(QWidget* parent) : QDialog(parent)
     m_list->setResizeMode(QListView::Adjust);
     m_list->setMovement(QListView::Static);
     m_list->setUniformItemSizes(true);
-    m_list->setGridSize(QSize(kIconSize + 48, kIconSize + 48));
+    m_list->setGridSize(QSize(kIconSize + 64, kIconSize + 64));
     m_list->setSpacing(12);
     m_list->setWordWrap(true);
     m_list->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -74,37 +70,35 @@ RayModpackDialog::RayModpackDialog(QWidget* parent) : QDialog(parent)
     m_refreshButton = new QPushButton(tr("Rafraîchir"), this);
     buttonRow->addWidget(m_refreshButton);
     buttonRow->addStretch(1);
-    auto* buttonBox = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    m_installButton = buttonBox->addButton(tr("Installer"), QDialogButtonBox::AcceptRole);
+    m_installButton = new QPushButton(tr("Installer"), this);
     m_installButton->setDefault(true);
     m_installButton->setEnabled(false);
-    buttonRow->addWidget(buttonBox);
+    buttonRow->addWidget(m_installButton);
     root->addLayout(buttonRow);
 
-    connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(m_refreshButton, &QPushButton::clicked, this, &RayModpackDialog::onRefreshClicked);
-    connect(m_list, &QListWidget::itemSelectionChanged, this, &RayModpackDialog::onSelectionChanged);
-    connect(m_list, &QListWidget::itemDoubleClicked, this, &RayModpackDialog::onItemDoubleClicked);
+    connect(m_refreshButton, &QPushButton::clicked, this, &RayModpackPage::onRefreshClicked);
+    connect(m_installButton, &QPushButton::clicked, this, &RayModpackPage::onInstallClicked);
+    connect(m_list, &QListWidget::itemSelectionChanged, this, &RayModpackPage::onSelectionChanged);
+    connect(m_list, &QListWidget::itemDoubleClicked, this, &RayModpackPage::onItemDoubleClicked);
 
     m_fetcher = new RayModpackIndexFetcher(APPLICATION->network(), BuildConfig.RAYLAUNCHER_MODPACK_INDEX_URL, this);
-    connect(m_fetcher, &RayModpackIndexFetcher::loaded, this, &RayModpackDialog::onIndexLoaded);
-    connect(m_fetcher, &RayModpackIndexFetcher::failed, this, &RayModpackDialog::onIndexFailed);
+    connect(m_fetcher, &RayModpackIndexFetcher::loaded, this, &RayModpackPage::onIndexLoaded);
+    connect(m_fetcher, &RayModpackIndexFetcher::failed, this, &RayModpackPage::onIndexFailed);
 
     setStatus(tr("Chargement de la liste de modpacks…"), false);
     m_refreshButton->setEnabled(false);
     m_fetcher->fetch();
 }
 
-RayModpackDialog::~RayModpackDialog() = default;
+RayModpackPage::~RayModpackPage() = default;
 
-void RayModpackDialog::setStatus(const QString& statusText, bool isError)
+void RayModpackPage::setStatus(const QString& statusText, bool isError)
 {
     m_statusLabel->setText(statusText);
     m_statusLabel->setStyleSheet(isError ? QStringLiteral("color: #c23b22;") : QString());
 }
 
-void RayModpackDialog::onRefreshClicked()
+void RayModpackPage::onRefreshClicked()
 {
     if (m_fetcher->isLoading())
         return;
@@ -114,7 +108,7 @@ void RayModpackDialog::onRefreshClicked()
     m_fetcher->fetch();
 }
 
-void RayModpackDialog::onIndexLoaded()
+void RayModpackPage::onIndexLoaded()
 {
     rebuildList();
     m_refreshButton->setEnabled(true);
@@ -125,7 +119,7 @@ void RayModpackDialog::onIndexLoaded()
     }
 }
 
-void RayModpackDialog::onIndexFailed(QString error)
+void RayModpackPage::onIndexFailed(QString error)
 {
     m_list->clear();
     m_refreshButton->setEnabled(true);
@@ -133,7 +127,7 @@ void RayModpackDialog::onIndexFailed(QString error)
     setStatus(tr("Erreur : %1").arg(error), true);
 }
 
-void RayModpackDialog::rebuildList()
+void RayModpackPage::rebuildList()
 {
     m_list->clear();
     const QIcon fallbackIcon = style()->standardIcon(QStyle::SP_FileDialogInfoView);
@@ -149,7 +143,7 @@ void RayModpackDialog::rebuildList()
     }
 }
 
-void RayModpackDialog::fetchIconFor(QListWidgetItem* item, const QUrl& url)
+void RayModpackPage::fetchIconFor(QListWidgetItem* item, const QUrl& url)
 {
     QNetworkRequest req(url);
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -173,45 +167,43 @@ void RayModpackDialog::fetchIconFor(QListWidgetItem* item, const QUrl& url)
     });
 }
 
-void RayModpackDialog::onSelectionChanged()
+std::optional<RayModpack> RayModpackPage::currentModpack() const
 {
     auto items = m_list->selectedItems();
-    if (items.isEmpty()) {
+    if (items.isEmpty())
+        return std::nullopt;
+    const QString packId = items.first()->data(Qt::UserRole).toString();
+    for (const RayModpack& pack : m_fetcher->modpacks()) {
+        if (pack.id == packId)
+            return pack;
+    }
+    return std::nullopt;
+}
+
+void RayModpackPage::onSelectionChanged()
+{
+    auto selected = currentModpack();
+    if (!selected.has_value()) {
         m_installButton->setEnabled(false);
         m_descriptionLabel->clear();
         return;
     }
-    const QString packId = items.first()->data(Qt::UserRole).toString();
-    for (const RayModpack& pack : m_fetcher->modpacks()) {
-        if (pack.id == packId) {
-            m_descriptionLabel->setText(pack.description);
-            m_installButton->setEnabled(true);
-            return;
-        }
-    }
-    m_installButton->setEnabled(false);
-    m_descriptionLabel->clear();
+    m_descriptionLabel->setText(selected->description);
+    m_installButton->setEnabled(true);
 }
 
-void RayModpackDialog::onItemDoubleClicked(QListWidgetItem* item)
+void RayModpackPage::onItemDoubleClicked(QListWidgetItem* item)
 {
     if (!item)
         return;
     m_list->setCurrentItem(item);
-    accept();
+    onInstallClicked();
 }
 
-void RayModpackDialog::accept()
+void RayModpackPage::onInstallClicked()
 {
-    auto items = m_list->selectedItems();
-    if (items.isEmpty())
+    auto selected = currentModpack();
+    if (!selected.has_value())
         return;
-    const QString packId = items.first()->data(Qt::UserRole).toString();
-    for (const RayModpack& pack : m_fetcher->modpacks()) {
-        if (pack.id == packId) {
-            m_selected = pack;
-            QDialog::accept();
-            return;
-        }
-    }
+    emit installRequested(*selected);
 }

@@ -18,8 +18,7 @@
 
 #pragma once
 
-#include <QDialog>
-#include <QHash>
+#include <QWidget>
 #include <optional>
 
 #include "modplatform/raylauncher/RayModpackIndex.h"
@@ -29,32 +28,43 @@ class QListWidget;
 class QListWidgetItem;
 class QPushButton;
 
-class RayModpackDialog : public QDialog {
+/**
+ * @brief The primary "Modpacks" tab shown in MainWindow on startup.
+ *
+ * Fetches the RayLauncher modpack catalogue (BuildConfig.RAYLAUNCHER_MODPACK_INDEX_URL),
+ * renders each pack as an item in a QListWidget (icon + name), and emits @ref installRequested
+ * when the user triggers an install. The actual InstanceImportTask plumbing lives in MainWindow
+ * so this widget stays free of app-wide side effects.
+ *
+ * For Commit 1 this is deliberately minimal — richer card rendering (state badges, descriptions,
+ * Play/Update states) ships in subsequent commits.
+ */
+class RayModpackPage : public QWidget {
     Q_OBJECT
    public:
-    explicit RayModpackDialog(QWidget* parent = nullptr);
-    ~RayModpackDialog() override;
+    explicit RayModpackPage(QWidget* parent = nullptr);
+    ~RayModpackPage() override;
 
-    // Valid only after the dialog is accepted.
-    std::optional<RayModpack> selectedModpack() const { return m_selected; }
+   signals:
+    /// Emitted when the user confirms they want to install a specific modpack.
+    void installRequested(const RayModpack& pack);
 
    private slots:
     void onIndexLoaded();
     void onIndexFailed(QString error);
     void onSelectionChanged();
     void onRefreshClicked();
+    void onInstallClicked();
     void onItemDoubleClicked(QListWidgetItem* item);
 
    private:
-    void accept() override;
     void setStatus(const QString& statusText, bool isError);
     void rebuildList();
     void fetchIconFor(QListWidgetItem* item, const QUrl& url);
+    std::optional<RayModpack> currentModpack() const;
 
     RayModpackIndexFetcher* m_fetcher = nullptr;
-    std::optional<RayModpack> m_selected;
 
-    // Widgets (all parented to this QDialog)
     QLabel* m_statusLabel = nullptr;
     QListWidget* m_list = nullptr;
     QLabel* m_descriptionLabel = nullptr;
