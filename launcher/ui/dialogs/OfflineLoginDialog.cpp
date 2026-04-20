@@ -3,6 +3,8 @@
 
 #include <QtWidgets/QPushButton>
 
+#include "Application.h"
+
 OfflineLoginDialog::OfflineLoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::OfflineLoginDialog)
 {
     ui->setupUi(this);
@@ -11,6 +13,14 @@ OfflineLoginDialog::OfflineLoginDialog(QWidget* parent) : QDialog(parent), ui(ne
 
     ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("OK"));
+
+    // Pre-fill with the last offline pseudo the user typed — saves them re-typing every time
+    // they add an account on a second machine or re-add after removing.
+    const QString remembered = APPLICATION->settings()->get("LastOfflineUsername").toString();
+    if (!remembered.isEmpty()) {
+        ui->userTextBox->setText(remembered);
+        ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(true);
+    }
 
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -27,8 +37,14 @@ void OfflineLoginDialog::accept()
     setUserInputsEnabled(false);
     ui->progressBar->setVisible(true);
 
+    // Remember the pseudo for next time so the dialog pre-fills on the next "Add Offline" click.
+    const QString entered = ui->userTextBox->text();
+    if (!entered.isEmpty()) {
+        APPLICATION->settings()->set("LastOfflineUsername", entered);
+    }
+
     // Setup the login task and start it
-    m_account = OfflineAccount::createOffline(ui->userTextBox->text());
+    m_account = OfflineAccount::createOffline(entered);
     m_loginTask = m_account->login();
     connect(m_loginTask.get(), &Task::failed, this, &OfflineLoginDialog::onTaskFailed);
     connect(m_loginTask.get(), &Task::succeeded, this, &OfflineLoginDialog::onTaskSucceeded);

@@ -41,8 +41,11 @@
    <property name="windowTitle">
     <string>Main Toolbar</string>
    </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
    <property name="allowedAreas">
-    <set>Qt::ToolBarArea::BottomToolBarArea|Qt::ToolBarArea::TopToolBarArea</set>
+    <set>Qt::ToolBarArea::TopToolBarArea</set>
    </property>
    <property name="toolButtonStyle">
     <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
@@ -64,7 +67,6 @@
    <addaction name="actionHelpButton"/>
    <addaction name="actionCheckUpdate"/>
    <addaction name="separator"/>
-   <addaction name="actionCAT"/>
    <addaction name="actionAccountsButton"/>
   </widget>
   <widget class="QToolBar" name="newsToolBar">

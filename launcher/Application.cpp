@@ -728,6 +728,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("Language", QString("fr_FR"));
         m_settings->registerSetting("UseSystemLocale", false);
 
+        // Remember the last offline username so the Add Offline dialog pre-fills with what the
+        // user typed before. On a fresh profile this stays empty — the user enters their pseudo
+        // once, and any subsequent offline-account-add starts with that pseudo pre-populated.
+        m_settings->registerSetting("LastOfflineUsername", QString());
+
         // Console
         m_settings->registerSetting("ShowConsole", false);
         m_settings->registerSetting("AutoCloseConsole", false);
