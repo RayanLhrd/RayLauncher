@@ -27,7 +27,9 @@
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run view 24669147320 --json jobs --jq '.jobs[].steps[] | select\\(.conclusion == \"failure\"\\) | {name: .name}')",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" api \"repos/RayanLhrd/RayLauncher/actions/runs/24669147320/artifacts\" --jq '.artifacts[] | \"\\\\\\(.name\\)\\\\t\\\\\\(.size_in_bytes / 1048576 | floor\\) MB\"')",
       "Bash(rm -f RayLauncher-Setup.exe)",
-      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download 24669147320 --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-0753162\")"
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download 24669147320 --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-0753162\")",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run list --repo RayanLhrd/RayLauncher --limit 1 --json databaseId,conclusion,displayTitle,headSha --jq '.[0]')",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-43c62a7\")"
     ]
   }
 }

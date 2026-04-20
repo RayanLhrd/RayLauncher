@@ -299,6 +299,21 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(m_modpackPage, &RayModpackPage::installRequested, this, &MainWindow::installRayModpack);
     connect(m_modpackPage, &RayModpackPage::playRequested, this, &MainWindow::playRayInstance);
     connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
+    connect(m_modpackPage, &RayModpackPage::openFolderRequested, this, [](const QString& instanceId) {
+        InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+        if (inst)
+            DesktopServices::openPath(inst->instanceRoot());
+    });
+    connect(m_modpackPage, &RayModpackPage::deleteRequested, this, [this](const QString& instanceId) {
+        // Select the instance via the hidden InstanceView selection model, then reuse the
+        // existing delete action — which handles the confirmation dialog and the isRunning guard.
+        QModelIndex idx = APPLICATION->instances()->getInstanceIndexById(instanceId);
+        if (!idx.isValid())
+            return;
+        QModelIndex proxyIdx = proxymodel->mapFromSource(idx);
+        view->selectionModel()->setCurrentIndex(proxyIdx, QItemSelectionModel::ClearAndSelect);
+        on_actionDeleteInstance_triggered();
+    });
     ui->horizontalLayout->addWidget(m_modpackPage);
 
     // Hide the right-side instance toolbar — its actions (Launch, Edit, Delete, ...) operate
@@ -962,6 +977,30 @@ void MainWindow::installRayModpack(const RayModpack& pack)
     task->setName(pack.name);
     if (!groupName.isEmpty())
         task->setGroup(groupName);
+
+    // Tag the first instance that appears with a matching name. This lets us recognize the
+    // pack as "from the RayLauncher catalogue" later — used by the delete-guard in
+    // RayModpackPage's context menu, and (in a future commit) by the Update flow for version
+    // compare. A shared_ptr holds the connection so we can disconnect from inside the lambda.
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    InstanceList* instances = APPLICATION->instances().get();
+    *conn = connect(instances, &InstanceList::rowsInserted, this,
+                    [instances, pack, conn](const QModelIndex&, int first, int last) {
+                        for (int row = first; row <= last; ++row) {
+                            InstancePtr inst = instances->at(row);
+                            if (!inst)
+                                continue;
+                            if (inst->name().trimmed() != pack.name.trimmed())
+                                continue;
+                            auto settings = inst->settings();
+                            settings->set("RayLauncher_ModpackId", pack.id);
+                            settings->set("RayLauncher_ModpackVersion", pack.version);
+                            if (*conn)
+                                QObject::disconnect(*conn);
+                            return;
+                        }
+                    });
+
     instanceFromInstanceTask(task);
 }
 

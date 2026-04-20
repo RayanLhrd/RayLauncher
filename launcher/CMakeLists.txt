@@ -1219,6 +1219,8 @@ SET(LAUNCHER_SOURCES
     ui/widgets/LanguageSelectionWidget.h
     ui/widgets/LogView.cpp
     ui/widgets/LogView.h
+    ui/widgets/FlowLayout.cpp
+    ui/widgets/FlowLayout.h
     ui/widgets/InfoFrame.cpp
     ui/widgets/InfoFrame.h
     ui/widgets/ModFilterWidget.cpp

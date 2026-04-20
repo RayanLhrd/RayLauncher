@@ -10,18 +10,18 @@
 
 #include "RayModpackCard.h"
 
+#include <QContextMenuEvent>
 #include <QFont>
 #include <QGraphicsOpacityEffect>
-#include <QHBoxLayout>
 #include <QLabel>
-#include <QMouseEvent>
 #include <QPushButton>
 #include <QStyle>
 #include <QVBoxLayout>
 
 namespace {
-constexpr int kIconSize = 96;
-constexpr int kCardMinHeight = 120;
+constexpr int kTileWidth = 200;
+constexpr int kTileHeight = 260;
+constexpr int kIconSize = 128;
 constexpr int kCardRadius = 10;
 
 const char* kStyleBase = R"(
@@ -42,55 +42,50 @@ RayModpackCard::RayModpackCard(const RayModpack& pack, State state, const QStrin
 {
     setObjectName("RayModpackCard");
     setFrameShape(QFrame::StyledPanel);
-    setCursor(Qt::PointingHandCursor);
-    setMinimumHeight(kCardMinHeight);
+    setFixedSize(kTileWidth, kTileHeight);
     setAttribute(Qt::WA_Hover, true);
     setStyleSheet(QString(kStyleBase).arg(kCardRadius));
 
-    auto* root = new QHBoxLayout(this);
-    root->setContentsMargins(14, 12, 14, 12);
-    root->setSpacing(14);
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(12, 12, 12, 12);
+    root->setSpacing(8);
 
+    // Icon on top, centred.
     m_iconLabel = new QLabel(this);
     m_iconLabel->setFixedSize(kIconSize, kIconSize);
-    m_iconLabel->setScaledContents(true);
     m_iconLabel->setAlignment(Qt::AlignCenter);
+    m_iconLabel->setScaledContents(false);
     m_iconLabel->setPixmap(style()->standardIcon(QStyle::SP_FileDialogInfoView).pixmap(kIconSize, kIconSize));
-    root->addWidget(m_iconLabel, 0, Qt::AlignTop);
+    root->addWidget(m_iconLabel, 0, Qt::AlignHCenter);
 
-    auto* textColumn = new QVBoxLayout();
-    textColumn->setContentsMargins(0, 0, 0, 0);
-    textColumn->setSpacing(4);
-
+    // Name — bold, centred, can wrap to 2 lines.
     m_nameLabel = new QLabel(pack.name, this);
+    m_nameLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+    m_nameLabel->setWordWrap(true);
     QFont nameFont = m_nameLabel->font();
     nameFont.setBold(true);
-    nameFont.setPointSize(nameFont.pointSize() + 2);
     m_nameLabel->setFont(nameFont);
-    textColumn->addWidget(m_nameLabel);
+    root->addWidget(m_nameLabel);
 
+    // Optional description — small, dimmed, elided if too long.
     m_descriptionLabel = new QLabel(pack.description, this);
+    m_descriptionLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
     m_descriptionLabel->setWordWrap(true);
-    m_descriptionLabel->setStyleSheet("color: palette(mid);");
-    textColumn->addWidget(m_descriptionLabel);
-    textColumn->addStretch(1);
+    m_descriptionLabel->setStyleSheet("color: palette(mid); font-size: 10px;");
+    root->addWidget(m_descriptionLabel, 1);
 
-    root->addLayout(textColumn, 1);
-
+    // Action button — the ONLY thing on the tile that triggers a user action.
     m_actionButton = new QPushButton(this);
     m_actionButton->setCursor(Qt::PointingHandCursor);
-    m_actionButton->setMinimumWidth(120);
-    m_actionButton->setMinimumHeight(36);
+    m_actionButton->setMinimumHeight(32);
     connect(m_actionButton, &QPushButton::clicked, this, &RayModpackCard::onActionButtonClicked);
-    root->addWidget(m_actionButton, 0, Qt::AlignVCenter);
+    root->addWidget(m_actionButton);
 
     applyState();
 }
 
 void RayModpackCard::applyState()
 {
-    // Default state: mark Available cards as dimmed by greying out the icon + text via an opacity effect.
-    // Installed cards keep full color.
     auto* existing = m_iconLabel->graphicsEffect();
     if (existing) {
         m_iconLabel->setGraphicsEffect(nullptr);
@@ -115,7 +110,6 @@ void RayModpackCard::applyState()
             m_actionButton->setObjectName("updateButton");
             break;
     }
-    // Ensure the button picks up any future stylesheet change keyed on objectName.
     m_actionButton->style()->unpolish(m_actionButton);
     m_actionButton->style()->polish(m_actionButton);
 }
@@ -141,26 +135,8 @@ void RayModpackCard::onActionButtonClicked()
     }
 }
 
-void RayModpackCard::mousePressEvent(QMouseEvent* event)
+void RayModpackCard::contextMenuEvent(QContextMenuEvent* event)
 {
-    // Entire card is clickable — click anywhere fires the state-appropriate signal,
-    // but only for the primary mouse button and only when not landing on the explicit
-    // action button (Qt will have already routed the press to it in that case).
-    if (event->button() == Qt::LeftButton) {
-        onActionButtonClicked();
-        event->accept();
-        return;
-    }
-    QFrame::mousePressEvent(event);
-}
-
-void RayModpackCard::enterEvent(QEnterEvent* event)
-{
-    QFrame::enterEvent(event);
-    // The :hover pseudo-state in the stylesheet handles the visual; nothing extra needed here for now.
-}
-
-void RayModpackCard::leaveEvent(QEvent* event)
-{
-    QFrame::leaveEvent(event);
+    emit contextMenuRequested(m_pack, m_instanceId, event->globalPos());
+    event->accept();
 }

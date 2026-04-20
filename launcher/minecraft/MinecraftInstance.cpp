@@ -182,6 +182,13 @@ void MinecraftInstance::loadSpecificSettings()
     if (isSpecificSettingsLoaded())
         return;
 
+    // RayLauncher catalogue tagging — written by MainWindow::installRayModpack once an install
+    // succeeds. The Modpacks tile uses the ID to detect "installed from catalogue" state (and
+    // will use Version for update detection in a later commit). Both default empty; a non-empty
+    // ID means the instance is locked against user-initiated deletion.
+    m_settings->registerSetting("RayLauncher_ModpackId", QString());
+    m_settings->registerSetting("RayLauncher_ModpackVersion", QString());
+
     // Java Settings
     auto locationOverride = m_settings->registerSetting("OverrideJavaLocation", false);
     auto argsOverride = m_settings->registerSetting("OverrideJavaArgs", false);

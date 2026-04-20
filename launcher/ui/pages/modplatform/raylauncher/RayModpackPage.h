@@ -11,6 +11,8 @@
 #pragma once
 
 #include <QHash>
+#include <QPixmap>
+#include <QPoint>
 #include <QWidget>
 
 #include "modplatform/raylauncher/RayModpackIndex.h"
@@ -19,20 +21,15 @@
 class QLabel;
 class QPushButton;
 class QScrollArea;
-class QVBoxLayout;
+class FlowLayout;
 
 /**
- * @brief The primary "Modpacks" central widget shown in MainWindow.
+ * @brief The primary central widget: a grid of square modpack tiles.
  *
- * Fetches the RayLauncher catalogue (BuildConfig.RAYLAUNCHER_MODPACK_INDEX_URL) on construction
- * and renders one RayModpackCard per pack. Each card's state (Available / Installed) is resolved
- * by matching the catalogue entry's `name` against the user's installed instances — if a matching
- * instance exists, the card switches to Installed and its action button becomes "Jouer". Name-
- * based matching is a deliberate v1 simplification; proper tagging via an `RayLauncher_ModpackId`
- * setting on the instance is scheduled for the next commit together with the Update flow.
- *
- * Actions are emitted as signals so MainWindow wires them into its existing task machinery
- * without this widget needing to know about InstanceImportTask / Application::launch.
+ * Lays catalogue tiles out with a FlowLayout (tiles wrap onto new rows as the window widens/narrows),
+ * and offers a per-tile right-click context menu for Play / Open folder / Delete.
+ * Actual work (InstanceImportTask, Application::launch, folder-open, delete confirm) is performed
+ * by MainWindow — this widget just tracks state and emits signals.
  */
 class RayModpackPage : public QWidget {
     Q_OBJECT
@@ -44,15 +41,20 @@ class RayModpackPage : public QWidget {
     void installRequested(const RayModpack& pack);
     void playRequested(const QString& instanceId);
     void updateRequested(const RayModpack& pack, const QString& instanceId);
+    /// Open the instance directory in the system file explorer.
+    void openFolderRequested(const QString& instanceId);
+    /// Delete the instance (after confirmation — caller owns the confirm dialog + the tag check).
+    void deleteRequested(const QString& instanceId);
 
    private slots:
     void onIndexLoaded();
     void onIndexFailed(QString error);
     void onRefreshClicked();
     void onInstanceListChanged();
+    void onCardContextMenu(const RayModpack& pack, const QString& instanceId, const QPoint& globalPos);
 
    private:
-    void rebuildCards();
+    void rebuildTiles();
     void setStatus(const QString& text, bool isError);
     QString installedInstanceIdFor(const RayModpack& pack) const;
     void fetchIcon(RayModpackCard* card, const QUrl& url);
@@ -62,8 +64,8 @@ class RayModpackPage : public QWidget {
     QLabel* m_statusLabel = nullptr;
     QPushButton* m_refreshButton = nullptr;
     QScrollArea* m_scrollArea = nullptr;
-    QWidget* m_cardsContainer = nullptr;
-    QVBoxLayout* m_cardsLayout = nullptr;
+    QWidget* m_tilesContainer = nullptr;
+    FlowLayout* m_tilesLayout = nullptr;
 
     // Kept so we can re-attach icons after a rebuild without redownloading — keyed by pack id.
     QHash<QString, QPixmap> m_iconCache;

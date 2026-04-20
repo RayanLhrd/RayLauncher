@@ -11,6 +11,7 @@
 #pragma once
 
 #include <QFrame>
+#include <QPoint>
 #include <QString>
 
 #include "modplatform/raylauncher/RayModpackIndex.h"
@@ -19,23 +20,24 @@ class QLabel;
 class QPushButton;
 
 /**
- * @brief A single modpack card in the catalogue grid.
+ * @brief A square "app-store" tile in the Modpacks catalogue grid.
  *
- * The card adapts its visual state (dimmed/full color, Install/Play action button) based on whether
- * the user already has a matching instance installed. Clicking anywhere on the card, or on the
- * explicit action button, emits the state-appropriate signal. Hover subtly highlights the card to
- * hint that it's actionable.
+ * Fixed 200×260 size so the parent FlowLayout can wrap tiles into rows when the window is wide
+ * enough. Layout is vertical: icon 128×128 on top, bold name, a 2-line wrapped description, and
+ * the primary action button at the bottom.
  *
- * This widget is deliberately dumb: state + matching is decided by RayModpackPage and passed in;
- * the card just renders and re-emits user intent.
+ * Click handling is deliberately conservative — **only** the explicit action button fires an
+ * action. Clicking on the icon / name / empty space of the tile does nothing (no full-card click
+ * like Commit 2 used to do). Right-click anywhere on the tile emits contextMenuRequested; the
+ * page draws a QMenu with state-dependent items (Jouer / Ouvrir le dossier / Supprimer …).
  */
 class RayModpackCard : public QFrame {
     Q_OBJECT
    public:
     enum class State {
-        Available,       ///< Modpack is in the catalog but not installed on this machine
-        Installed,       ///< Modpack is installed and up to date (or we can't tell — v1 heuristic)
-        UpdateAvailable  ///< Reserved for Commit 3; unused for now
+        Available,       ///< no matching installed instance → dimmed icon, button "Installer"
+        Installed,       ///< instance exists and is up to date (v1: name-matched)           → button "Jouer"
+        UpdateAvailable  ///< reserved for Commit 5 — button would read "Mettre à jour"
     };
 
     RayModpackCard(const RayModpack& pack, State state, const QString& instanceId, QWidget* parent = nullptr);
@@ -52,13 +54,13 @@ class RayModpackCard : public QFrame {
     void installClicked(const RayModpack& pack);
     /// Fired when the user wants to launch the matching instance (state == Installed).
     void playClicked(const QString& instanceId);
-    /// Fired when the user wants to update the matching instance (state == UpdateAvailable).
+    /// Fired when the user wants to update the matching instance (state == UpdateAvailable, future).
     void updateClicked(const RayModpack& pack, const QString& instanceId);
+    /// Fired when the tile receives a right-click. globalPos is pre-computed from QContextMenuEvent.
+    void contextMenuRequested(const RayModpack& pack, const QString& instanceId, const QPoint& globalPos);
 
    protected:
-    void mousePressEvent(QMouseEvent* event) override;
-    void enterEvent(QEnterEvent* event) override;
-    void leaveEvent(QEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
    private slots:
     void onActionButtonClicked();

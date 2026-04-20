@@ -10,9 +10,11 @@
 
 #include "RayModpackPage.h"
 
+#include <QAction>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLayoutItem>
+#include <QMenu>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPixmap>
@@ -25,6 +27,8 @@
 #include "BaseInstance.h"
 #include "BuildConfig.h"
 #include "InstanceList.h"
+#include "settings/SettingsObject.h"
+#include "ui/widgets/FlowLayout.h"
 
 RayModpackPage::RayModpackPage(QWidget* parent) : QWidget(parent)
 {
@@ -32,25 +36,23 @@ RayModpackPage::RayModpackPage(QWidget* parent) : QWidget(parent)
     root->setContentsMargins(16, 16, 16, 16);
     root->setSpacing(10);
 
-    auto* header = new QLabel(tr("Choisis un modpack. Pas encore installé ? Un clic et c'est parti."), this);
+    auto* header = new QLabel(tr("Choisis un modpack — un clic sur Installer suffit. Clic droit pour plus d'options."), this);
     QFont headerFont = header->font();
     headerFont.setPointSize(headerFont.pointSize() + 1);
     header->setFont(headerFont);
     root->addWidget(header);
 
-    // Scroll area containing the vertical stack of cards.
+    // Scroll area containing the tile grid (FlowLayout reflows tiles as the window resizes).
     m_scrollArea = new QScrollArea(this);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_scrollArea->setFrameShape(QFrame::NoFrame);
 
-    m_cardsContainer = new QWidget(m_scrollArea);
-    m_cardsLayout = new QVBoxLayout(m_cardsContainer);
-    m_cardsLayout->setContentsMargins(0, 0, 0, 0);
-    m_cardsLayout->setSpacing(10);
-    m_cardsLayout->addStretch(1);
+    m_tilesContainer = new QWidget(m_scrollArea);
+    m_tilesLayout = new FlowLayout(m_tilesContainer, /*margin=*/0, /*hSpacing=*/12, /*vSpacing=*/12);
+    m_tilesContainer->setLayout(m_tilesLayout);
 
-    m_scrollArea->setWidget(m_cardsContainer);
+    m_scrollArea->setWidget(m_tilesContainer);
     root->addWidget(m_scrollArea, 1);
 
     // Status line + refresh control
@@ -71,7 +73,7 @@ RayModpackPage::RayModpackPage(QWidget* parent) : QWidget(parent)
     connect(m_fetcher, &RayModpackIndexFetcher::loaded, this, &RayModpackPage::onIndexLoaded);
     connect(m_fetcher, &RayModpackIndexFetcher::failed, this, &RayModpackPage::onIndexFailed);
 
-    // Watch the instance list so cards flip from Install → Play automatically once an install finishes.
+    // Watch the instance list so tiles flip from Install → Play automatically once an install finishes.
     auto* instances = APPLICATION->instances().get();
     connect(instances, &InstanceList::rowsInserted, this, &RayModpackPage::onInstanceListChanged);
     connect(instances, &InstanceList::rowsRemoved, this, &RayModpackPage::onInstanceListChanged);
@@ -108,26 +110,25 @@ void RayModpackPage::onIndexLoaded()
     } else {
         setStatus(tr("%1 modpack(s) disponible(s).").arg(n), false);
     }
-    rebuildCards();
+    rebuildTiles();
 }
 
 void RayModpackPage::onIndexFailed(QString error)
 {
     m_refreshButton->setEnabled(true);
     setStatus(tr("Erreur : %1").arg(error), true);
-    rebuildCards();  // still rebuild — shows an empty list
+    rebuildTiles();  // still rebuild — shows an empty grid
 }
 
 void RayModpackPage::onInstanceListChanged()
 {
-    // An install or delete happened; re-evaluate each card's state.
-    rebuildCards();
+    rebuildTiles();
 }
 
 QString RayModpackPage::installedInstanceIdFor(const RayModpack& pack) const
 {
-    // v1 heuristic: match installed instances by name. Proper RayLauncher_ModpackId tagging
-    // arrives in the next commit alongside the Update flow.
+    // v1 heuristic: match installed instances by name. Swapped for ID-based matching in Commit 5
+    // once the RayLauncher_ModpackId tag we write on install has propagated through everyone's data.
     auto list = APPLICATION->instances();
     for (int i = 0; i < list->count(); ++i) {
         InstancePtr inst = list->at(i);
@@ -139,11 +140,10 @@ QString RayModpackPage::installedInstanceIdFor(const RayModpack& pack) const
     return {};
 }
 
-void RayModpackPage::rebuildCards()
+void RayModpackPage::rebuildTiles()
 {
-    // Clear all cards (keep the trailing stretch).
-    while (m_cardsLayout->count() > 0) {
-        QLayoutItem* item = m_cardsLayout->takeAt(0);
+    // Tear down existing tiles.
+    while (QLayoutItem* item = m_tilesLayout->takeAt(0)) {
         if (QWidget* w = item->widget()) {
             w->deleteLater();
         }
@@ -155,22 +155,20 @@ void RayModpackPage::rebuildCards()
         const QString instId = installedInstanceIdFor(pack);
         const RayModpackCard::State state = instId.isEmpty() ? RayModpackCard::State::Available : RayModpackCard::State::Installed;
 
-        auto* card = new RayModpackCard(pack, state, instId, m_cardsContainer);
+        auto* card = new RayModpackCard(pack, state, instId, m_tilesContainer);
         connect(card, &RayModpackCard::installClicked, this, &RayModpackPage::installRequested);
         connect(card, &RayModpackCard::playClicked, this, &RayModpackPage::playRequested);
         connect(card, &RayModpackCard::updateClicked, this, &RayModpackPage::updateRequested);
+        connect(card, &RayModpackCard::contextMenuRequested, this, &RayModpackPage::onCardContextMenu);
 
-        // Re-attach a cached icon if we already fetched it.
         if (m_iconCache.contains(pack.id) && !m_iconCache.value(pack.id).isNull()) {
             card->setIcon(m_iconCache.value(pack.id));
         } else if (!pack.iconUrl.isEmpty()) {
             fetchIcon(card, pack.iconUrl);
         }
 
-        m_cardsLayout->addWidget(card);
+        m_tilesLayout->addWidget(card);
     }
-
-    m_cardsLayout->addStretch(1);
 }
 
 void RayModpackPage::fetchIcon(RayModpackCard* card, const QUrl& url)
@@ -179,7 +177,6 @@ void RayModpackPage::fetchIcon(RayModpackCard* card, const QUrl& url)
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     QNetworkReply* reply = APPLICATION->network()->get(req);
 
-    // Track by pack id instead of the card pointer — the card may get recreated during a rebuild.
     const QString packId = card->pack().id;
     QPointer<RayModpackCard> cardGuard(card);
 
@@ -194,4 +191,42 @@ void RayModpackPage::fetchIcon(RayModpackCard* card, const QUrl& url)
         if (cardGuard)
             cardGuard->setIcon(pix);
     });
+}
+
+void RayModpackPage::onCardContextMenu(const RayModpack& pack, const QString& instanceId, const QPoint& globalPos)
+{
+    QMenu menu(this);
+
+    const bool installed = !instanceId.isEmpty();
+
+    if (!installed) {
+        // Nothing useful in a right-click for an un-installed pack; just offer Install for parity.
+        auto* installAct = menu.addAction(tr("Installer"));
+        connect(installAct, &QAction::triggered, this, [this, pack]() { emit installRequested(pack); });
+    } else {
+        auto* playAct = menu.addAction(tr("Jouer"));
+        connect(playAct, &QAction::triggered, this, [this, instanceId]() { emit playRequested(instanceId); });
+
+        auto* folderAct = menu.addAction(tr("Ouvrir le dossier"));
+        connect(folderAct, &QAction::triggered, this, [this, instanceId]() { emit openFolderRequested(instanceId); });
+
+        menu.addSeparator();
+
+        auto* deleteAct = menu.addAction(tr("Supprimer"));
+        // Delete guard: if this instance is tagged as a RayLauncher catalogue pack, disable the action.
+        InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+        bool isCataloguePack = false;
+        if (inst) {
+            const QString tag = inst->settings()->get("RayLauncher_ModpackId").toString();
+            isCataloguePack = !tag.isEmpty();
+        }
+        if (isCataloguePack) {
+            deleteAct->setEnabled(false);
+            deleteAct->setToolTip(tr("Modpack du catalogue RayLauncher — non supprimable."));
+        } else {
+            connect(deleteAct, &QAction::triggered, this, [this, instanceId]() { emit deleteRequested(instanceId); });
+        }
+    }
+
+    menu.exec(globalPos);
 }
