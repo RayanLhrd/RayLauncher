@@ -948,9 +948,10 @@ void MainWindow::on_actionAddInstance_triggered()
 
 void MainWindow::on_actionMyModpacks_triggered()
 {
-    // The toolbar action just surfaces the Modpacks tab — no popup anymore.
-    if (m_mainTabs)
-        m_mainTabs->setCurrentIndex(0);
+    // The Modpacks page is now the sole central widget — there's nothing else to switch
+    // away from. The toolbar action is kept for backwards compatibility with the .ui's
+    // auto-connect; a later commit will either scroll the page to the top or remove the
+    // button outright.
 }
 
 void MainWindow::installRayModpack(const RayModpack& pack)
