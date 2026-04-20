@@ -13,6 +13,10 @@ jobs:
     name: Windows MSVC (x64)
     runs-on: windows-2022
 
+    permissions:
+      # Required for vcpkg NuGet binary cache (pushes to GitHub Packages)
+      packages: write
+
     env:
       INSTALL_DIR: install
       INSTALL_PORTABLE_DIR: install-portable
@@ -47,6 +51,29 @@ jobs:
           vsversion: 2022
           arch: amd64
 
+      - name: Expose VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Set up vcpkg NuGet binary cache
+        shell: pwsh
+        env:
+          USERNAME: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ github.token }}
+          FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        run: |
+          .$(vcpkg fetch nuget) `
+            sources add `
+            -Source "$env:FEED_URL" `
+            -StorePasswordInClearText `
+            -Name GitHubPackages `
+            -UserName "$env:USERNAME" `
+            -Password "$env:GITHUB_TOKEN"
+          .$(vcpkg fetch nuget) `
+            setapikey "$env:GITHUB_TOKEN" `
+            -Source "$env:FEED_URL"
+          "VCPKG_BINARY_SOURCES=clear;nuget,$env:FEED_URL,readwrite" | Out-File -Append $env:GITHUB_ENV
+
       - name: Install NSIS NScurl plugin
         shell: pwsh
         run: |
@@ -54,39 +81,18 @@ jobs:
           Invoke-WebRequest https://github.com/negrutiu/nsis-nscurl/releases/download/v24.9.26.122/NScurl.zip -OutFile NSISPlugins\NScurl.zip
           Expand-Archive -Path NSISPlugins\NScurl.zip -DestinationPath NSISPlugins\NScurl
 
-      - name: Configure CMake
-        shell: pwsh
-        run: |
-          cmake -S . -B ${{ env.BUILD_DIR }} `
-            -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_DIR }} `
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
-            -DENABLE_LTO=ON `
-            -DLauncher_ENABLE_JAVA_DOWNLOADER=ON `
-            -DLauncher_BUILD_PLATFORM=official `
-            -DLauncher_QT_VERSION_MAJOR=6 `
-            -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreadedDLL" `
-            -DLauncher_FORCE_BUNDLED_LIBS=ON `
-            -DLauncher_BUILD_ARTIFACT=Windows-MSVC-Qt6 `
-            -G Ninja
+      - name: Configure CMake (uses windows_msvc preset + vcpkg)
+        run: cmake --preset windows_msvc
 
       - name: Build
-        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
+        run: cmake --build --preset windows_msvc --config ${{ env.BUILD_TYPE }}
 
       - name: Run tests
         continue-on-error: true
-        run: ctest -E "^example64|example$" --test-dir ${{ env.BUILD_DIR }} --output-on-failure -C ${{ env.BUILD_TYPE }}
+        run: ctest --preset windows_msvc --build-config ${{ env.BUILD_TYPE }}
 
       - name: Install
         run: cmake --install ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
-
-      - name: Generate install manifest
-        shell: pwsh
-        run: |
-          Get-ChildItem ${{ env.INSTALL_DIR }} -Recurse -File |
-            ForEach-Object FullName |
-            Resolve-Path -Relative |
-            ForEach-Object { $_.TrimStart('.\').Replace('install\', '') } |
-            Out-File -FilePath ${{ env.INSTALL_DIR }}/manifest.txt
 
       - name: Build portable bundle
         shell: pwsh
