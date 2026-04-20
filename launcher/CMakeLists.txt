@@ -1171,6 +1171,8 @@ SET(LAUNCHER_SOURCES
     ui/pagedialog/PageDialog.h
     ui/dialogs/ProgressDialog.cpp
     ui/dialogs/ProgressDialog.h
+    ui/dialogs/RaySimpleProgressDialog.cpp
+    ui/dialogs/RaySimpleProgressDialog.h
     ui/dialogs/ReviewMessageBox.cpp
     ui/dialogs/ReviewMessageBox.h
     ui/dialogs/VersionSelectDialog.cpp

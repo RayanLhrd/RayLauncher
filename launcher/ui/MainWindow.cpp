@@ -106,6 +106,7 @@
 #include "InstanceImportTask.h"
 #include "ui/dialogs/NewsDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
+#include "ui/dialogs/RaySimpleProgressDialog.h"
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
@@ -301,8 +302,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
     connect(m_modpackPage, &RayModpackPage::openFolderRequested, this, [](const QString& instanceId) {
         InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
-        if (inst)
-            DesktopServices::openPath(inst->instanceRoot());
+        if (!inst)
+            return;
+        // Open the actual .minecraft directory (gameRoot) rather than the launcher-owned
+        // wrapper (instanceRoot) — that's where mods/, config/, saves/, resourcepacks/
+        // live, which is what users always want to reach.
+        auto mcInst = std::dynamic_pointer_cast<MinecraftInstance>(inst);
+        const QString path = mcInst ? mcInst->gameRoot() : inst->instanceRoot();
+        DesktopServices::openPath(path);
     });
     connect(m_modpackPage, &RayModpackPage::deleteRequested, this, [this](const QString& instanceId) {
         // Select the instance via the hidden InstanceView selection model, then reuse the
@@ -973,10 +980,10 @@ void MainWindow::installRayModpack(const RayModpack& pack)
 {
     QString groupName = APPLICATION->settings()->get("LastUsedGroupForNewInstance").toString();
 
-    auto* task = new InstanceImportTask(pack.mrpackUrl, this);
-    task->setName(pack.name);
+    auto* rawTask = new InstanceImportTask(pack.mrpackUrl, this);
+    rawTask->setName(pack.name);
     if (!groupName.isEmpty())
-        task->setGroup(groupName);
+        rawTask->setGroup(groupName);
 
     // Tag the first instance that appears with a matching name. This lets us recognize the
     // pack as "from the RayLauncher catalogue" later — used by the delete-guard in
@@ -1001,7 +1008,21 @@ void MainWindow::installRayModpack(const RayModpack& pack)
                         }
                     });
 
-    instanceFromInstanceTask(task);
+    // Wrap the import task like instanceFromInstanceTask() does so the created instance
+    // registers with APPLICATION->instances(), but swap the default ProgressDialog for our
+    // stripped-down RaySimpleProgressDialog — just a bar + percentage + short status line.
+    unique_qobject_ptr<Task> wrapped(APPLICATION->instances()->wrapInstanceTask(rawTask));
+    connect(wrapped.get(), &Task::failed, this,
+            [this](QString reason) { CustomMessageBox::selectable(this, tr("Erreur"), reason, QMessageBox::Critical)->show(); });
+    connect(wrapped.get(), &Task::succeeded, this, [this, task = wrapped.get()]() {
+        QStringList warnings = task->warnings();
+        if (!warnings.isEmpty())
+            CustomMessageBox::selectable(this, tr("Avertissements"), warnings.join('\n'), QMessageBox::Warning)->show();
+    });
+
+    RaySimpleProgressDialog dlg(this);
+    dlg.setHeadline(tr("Installation de %1…").arg(pack.name));
+    dlg.execWithTask(wrapped.get());
 }
 
 void MainWindow::playRayInstance(const QString& instanceId)
