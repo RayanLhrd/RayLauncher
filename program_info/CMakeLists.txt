@@ -47,6 +47,7 @@ configure_file(freesmlauncher.qrc.in freesmlauncher.qrc @ONLY)
 configure_file(freesmlauncher.manifest.in freesmlauncher.manifest @ONLY)
 configure_file(freesmlauncher.ico freesmlauncher.ico COPYONLY)
 configure_file(${Launcher_SVGFileName} ${Launcher_SVGFileName} COPYONLY)
+configure_file(${Launcher_AppID}_256.png ${Launcher_AppID}_256.png COPYONLY)
 
 if(MSVC)
     set(Launcher_MSVC_Redist_NSIS_Section [=[

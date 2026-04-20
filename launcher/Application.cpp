@@ -1549,15 +1549,18 @@ std::shared_ptr<DiscordIntegration> Application::discord()
 
 QIcon Application::logo()
 {
-    // Prefer the multi-resolution ICO baked into the qrc — Qt's SVG renderer was struggling
-    // to rasterize our base64-embedded PNG wrapper at small sizes (16×16 / 32×32 for the
-    // Windows taskbar), which left the running app showing the OS default icon. The ICO
-    // already carries pre-rendered bitmaps at 16/32/48/64/128/256, so QIcon picks the
-    // correct size without having to rasterize anything. Fall back to the SVG on platforms
-    // where the ICO handler isn't available.
-    QIcon icon(":/logo.ico");
-    if (icon.isNull())
-        icon = QIcon(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
+    // Build a multi-source QIcon so Qt can always pick a usable bitmap regardless of which
+    // image plugin is available at runtime:
+    //   1. 256×256 PNG — always loadable (Qt ships its PNG decoder in QtGui itself).
+    //   2. Multi-res ICO — provides pre-rendered 16/32/48/…/256 for high-DPI taskbar use.
+    //   3. SVG wrapper  — last-resort path for platforms without the ICO handler.
+    // The order matters because QIcon::addFile just records candidates; QIcon then picks the
+    // closest match at paint time. Having the PNG present guarantees the "small taskbar
+    // icon" ask never falls through to the OS default.
+    QIcon icon;
+    icon.addFile(QStringLiteral(":/logo.png"), QSize(256, 256));
+    icon.addFile(QStringLiteral(":/logo.ico"));
+    icon.addFile(":/" + BuildConfig.LAUNCHER_SVGFILENAME);
     return icon;
 }
 

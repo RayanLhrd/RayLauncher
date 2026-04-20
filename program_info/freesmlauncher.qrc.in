@@ -3,5 +3,6 @@
     <qresource prefix="/">
         <file>@Launcher_AppID@.svg</file>
         <file alias="logo.ico">freesmlauncher.ico</file>
+        <file alias="logo.png">@Launcher_AppID@_256.png</file>
     </qresource>
 </RCC>
