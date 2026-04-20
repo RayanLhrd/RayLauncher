@@ -80,14 +80,36 @@ int RaySimpleProgressDialog::execWithTask(Task* task)
     m_task = task;
     m_finished = false;
 
+    if (!task) {
+        return QDialog::Accepted;
+    }
+
+    // The task may have already finished by the time we reach here — this happens in the launch
+    // path when LaunchController::onProgressRequested is called with a sub-task that completed
+    // synchronously (cached assets, valid auth token, etc.). Without this check, our exec() would
+    // block waiting for signals that have already fired, leaving the dialog open forever while
+    // the game launches behind it. That exact bug is what this early-return prevents.
+    if (task->isFinished()) {
+        return task->wasSuccessful() ? QDialog::Accepted : QDialog::Rejected;
+    }
+
     connect(task, &Task::progress, this, &RaySimpleProgressDialog::onTaskProgress);
     connect(task, &Task::status, this, &RaySimpleProgressDialog::onTaskStatus);
     connect(task, &Task::succeeded, this, &RaySimpleProgressDialog::onTaskSucceeded);
     connect(task, &Task::failed, this, &RaySimpleProgressDialog::onTaskFailed);
     connect(task, &Task::aborted, this, &RaySimpleProgressDialog::onTaskAborted);
 
-    if (!task->isRunning())
-        task->start();
+    if (task->isRunning()) {
+        // The task is already running — retroactively sync status and progress so the UI doesn't
+        // start blank. Future updates arrive through the signal connections above.
+        onTaskStatus(task->getStatus());
+        onTaskProgress(task->getProgress(), task->getTotalProgress());
+    } else {
+        // Start the task via a queued call so the event loop is guaranteed running by the time
+        // the task emits its first signals — otherwise a fast synchronous task would complete
+        // before we enter exec() and we'd miss the succeeded/failed signals.
+        QMetaObject::invokeMethod(task, &Task::start, Qt::QueuedConnection);
+    }
 
     return QDialog::exec();
 }
