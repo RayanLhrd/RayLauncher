@@ -477,5 +477,8 @@ void RayTheme::applyGlobalStyle()
     pal.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(kTextSecondary));
 
     QApplication::setPalette(pal);
-    QApplication::setStyleSheet(buildStyleSheet());
+    // setStyleSheet is a non-static slot on QApplication — has to go through the singleton.
+    if (auto* app = qobject_cast<QApplication*>(QApplication::instance())) {
+        app->setStyleSheet(buildStyleSheet());
+    }
 }
