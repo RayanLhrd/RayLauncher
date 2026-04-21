@@ -658,7 +658,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         bool isWinter = now.month() >= 12 || now.month() <= 2;
 
         // Theming
-        m_settings->registerSetting("IconTheme", QString("fluent_dark"));
+        m_settings->registerSetting("IconTheme", QString("flat_white"));
         m_settings->registerSetting("ApplicationTheme", QString("freesm"));
         m_settings->registerSetting("BackgroundCat", QString("typescript"));
         m_settings->registerSetting("Snow", isWinter);
@@ -752,6 +752,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
             m_settings->set("MainWindowState", QString());
             m_settings->set("ToolbarsLocked", true);
             m_settings->set("RayLauncher_FirstRunMigrationDone_v2", true);
+        }
+        // v3: switch default IconTheme from "fluent_dark" to "flat_white" — the monochrome flat
+        // icons read better on the new dark palette than the Fluent colored ones. Users who
+        // already completed v2 never got this update, so run a targeted one-shot.
+        m_settings->registerSetting("RayLauncher_FirstRunMigrationDone_v3", false);
+        if (!m_settings->get("RayLauncher_FirstRunMigrationDone_v3").toBool()) {
+            m_settings->set("IconTheme", QString("flat_white"));
+            m_settings->set("RayLauncher_FirstRunMigrationDone_v3", true);
         }
         // Always-on corrective: if a previous build stamped an invalid "fr_FR" code, quietly
         // rewrite it to "fr" regardless of migration state. Idempotent.

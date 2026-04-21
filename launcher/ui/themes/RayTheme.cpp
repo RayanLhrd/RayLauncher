@@ -35,6 +35,8 @@ constexpr const char* kWarning       = "#F5A524";  // Update button
 constexpr const char* kWarningHover  = "#F8B848";  // Update hover
 constexpr const char* kDanger        = "#EF4444";  // Kill, destructive
 constexpr const char* kDangerHover   = "#F26666";  // Danger hover
+constexpr const char* kInfo          = "#3B82F6";  // Install (download action)
+constexpr const char* kInfoHover     = "#60A5FA";  // Install hover
 
 // Single global stylesheet. Placed as a raw-string literal so it keeps its readable formatting.
 // Selector order: Qt built-ins first (roughly layout order from root to leaves), then our
@@ -384,13 +386,21 @@ const char* kGlobalStyleSheetTemplate = R"QSS(
         background-color: %BG_RAISED_HOVER%;
         border-color: %ACCENT%;
     }
-    RayModpackCard QPushButton#installButton,
+    /* Install = download action → blue, distinct from Play's "go" green. */
+    RayModpackCard QPushButton#installButton {
+        background-color: %INFO%;
+        color: %TEXT_PRIMARY%;
+        border-color: %INFO%;
+    }
+    RayModpackCard QPushButton#installButton:hover {
+        background-color: %INFO_HOVER%;
+        border-color: %INFO_HOVER%;
+    }
     RayModpackCard QPushButton#playButton {
         background-color: %ACCENT%;
         color: %BG_BASE%;
         border-color: %ACCENT%;
     }
-    RayModpackCard QPushButton#installButton:hover,
     RayModpackCard QPushButton#playButton:hover {
         background-color: %ACCENT_HOVER%;
         border-color: %ACCENT_HOVER%;
@@ -436,6 +446,8 @@ QString buildStyleSheet()
         { QLatin1String("%WARNING%"),         QLatin1String(kWarning) },
         { QLatin1String("%DANGER_HOVER%"),    QLatin1String(kDangerHover) },
         { QLatin1String("%DANGER%"),          QLatin1String(kDanger) },
+        { QLatin1String("%INFO_HOVER%"),      QLatin1String(kInfoHover) },
+        { QLatin1String("%INFO%"),            QLatin1String(kInfo) },
     };
     for (const auto& [token, value] : tokens) {
         qss.replace(token, value);
