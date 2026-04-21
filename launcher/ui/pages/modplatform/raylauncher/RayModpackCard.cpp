@@ -71,7 +71,8 @@ RayModpackCard::RayModpackCard(const RayModpack& pack, State state, const QStrin
     m_descriptionLabel = new QLabel(pack.description, this);
     m_descriptionLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
     m_descriptionLabel->setWordWrap(true);
-    m_descriptionLabel->setStyleSheet("color: palette(mid); font-size: 10px;");
+    // Bright text — palette(mid) was too close to the raised-card background for comfort.
+    m_descriptionLabel->setStyleSheet("color: #E6EDF3; font-size: 11px;");
     root->addWidget(m_descriptionLabel, 1);
 
     // Action button — the ONLY thing on the tile that triggers a user action.
