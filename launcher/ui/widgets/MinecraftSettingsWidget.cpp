@@ -185,7 +185,7 @@ void MinecraftSettingsWidget::loadSettings()
     m_ui->autoCloseConsoleCheck->setChecked(settings->get("AutoCloseConsole").toBool());
     m_ui->showConsoleErrorCheck->setChecked(settings->get("ShowConsoleOnError").toBool());
 
-    m_ui->copyIngameScreenshotsCheck->setChecked(settings->get("CopyIngameScreenshots").toBool());
+    // copyIngameScreenshotsCheck removed together with the CopyIngameScreenshots setting.
 
     if (m_javaSettings != nullptr)
         m_javaSettings->loadSettings();
@@ -351,14 +351,14 @@ void MinecraftSettingsWidget::saveSettings()
             settings->set("MinecraftWinHeight", m_ui->windowHeightSpinBox->value());
             settings->set("CloseAfterLaunch", m_ui->closeAfterLaunchCheck->isChecked());
             settings->set("QuitAfterGameStop", m_ui->quitAfterGameStopCheck->isChecked());
-            settings->set("CopyIngameScreenshots", m_ui->copyIngameScreenshotsCheck->isChecked());
+            // CopyIngameScreenshots persist removed.
         } else {
             settings->reset("LaunchMaximized");
             settings->reset("MinecraftWinWidth");
             settings->reset("MinecraftWinHeight");
             settings->reset("CloseAfterLaunch");
             settings->reset("QuitAfterGameStop");
-            settings->reset("CopyIngameScreenshots");
+            // CopyIngameScreenshots reset removed.
         }
 
         // Custom Commands

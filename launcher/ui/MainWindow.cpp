@@ -383,16 +383,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances().get(), &InstanceList::on_GroupStateChanged);
         // Not added to any layout — the Modpacks page is the sole visible central widget.
     }
-    // The cat background
-    {
-        // set the cat action priority here so you can still see the action in qt designer
-        ui->actionCAT->setPriority(QAction::LowPriority);
-        bool cat_enable = APPLICATION->settings()->get("TheCat").toBool();
-        ui->actionCAT->setChecked(cat_enable);
-        connect(ui->actionCAT, &QAction::toggled, this, &MainWindow::onCatToggled);
-        connect(APPLICATION, &Application::currentCatChanged, this, &MainWindow::onCatChanged);
-        setCatBackground(cat_enable);
-    }
+    // Animated cat background + snow effect were removed in the visual overhaul. The
+    // instance view paints on the plain RayTheme canvas now.
 
     // Togglable status bar
     {
@@ -658,34 +650,7 @@ void MainWindow::updateLaunchButton()
 
 void MainWindow::updateThemeMenu()
 {
-    QMenu* themeMenu = ui->actionChangeTheme->menu();
-
-    if (themeMenu) {
-        themeMenu->clear();
-    } else {
-        themeMenu = new QMenu(this);
-    }
-
-    auto themes = APPLICATION->themeManager()->getValidApplicationThemes();
-
-    QActionGroup* themesGroup = new QActionGroup(this);
-
-    for (auto* theme : themes) {
-        QAction* themeAction = themeMenu->addAction(theme->name());
-
-        themeAction->setCheckable(true);
-        if (APPLICATION->settings()->get("ApplicationTheme").toString() == theme->id()) {
-            themeAction->setChecked(true);
-        }
-        themeAction->setActionGroup(themesGroup);
-
-        connect(themeAction, &QAction::triggered, [theme]() {
-            APPLICATION->themeManager()->setApplicationTheme(theme->id());
-            APPLICATION->settings()->set("ApplicationTheme", theme->id());
-        });
-    }
-
-    ui->actionChangeTheme->setMenu(themeMenu);
+    // Theme menu removed — RayLauncher ships a single locked look, no runtime switching.
 }
 
 void MainWindow::repopulateAccountsMenu()
@@ -884,18 +849,6 @@ QString intListToString(const QList<int>& list)
         slist.append(QString::number(list.at(i)));
     }
     return slist.join(',');
-}
-
-void MainWindow::onCatToggled(bool state)
-{
-    setCatBackground(state);
-    APPLICATION->settings()->set("TheCat", state);
-}
-
-void MainWindow::setCatBackground(bool enabled)
-{
-    view->setPaintCat(enabled);
-    view->viewport()->repaint();
 }
 
 void MainWindow::runModalTask(Task* task)
@@ -1390,20 +1343,8 @@ void MainWindow::on_actionViewSkinsFolder_triggered()
     DesktopServices::openPath(APPLICATION->settings()->get("SkinsDir").toString(), true);
 }
 
-void MainWindow::on_actionViewIconThemeFolder_triggered()
-{
-    DesktopServices::openPath(APPLICATION->themeManager()->getIconThemesFolder().path(), true);
-}
-
-void MainWindow::on_actionViewWidgetThemeFolder_triggered()
-{
-    DesktopServices::openPath(APPLICATION->themeManager()->getApplicationThemesFolder().path(), true);
-}
-
-void MainWindow::on_actionViewCatPackFolder_triggered()
-{
-    DesktopServices::openPath(APPLICATION->themeManager()->getCatPacksFolder().path(), true);
-}
+// View-Icon-Theme-Folder / View-Widget-Theme-Folder / View-Cat-Pack-Folder handlers removed:
+// the user no longer picks icon or widget themes, and the cat pack subsystem is gone.
 
 void MainWindow::on_actionViewIconsFolder_triggered()
 {
@@ -1535,11 +1476,6 @@ void MainWindow::newsButtonClicked()
     NewsDialog news_dialog(entries, this);
     news_dialog.toggleArticleList();
     news_dialog.exec();
-}
-
-void MainWindow::onCatChanged(int)
-{
-    setCatBackground(APPLICATION->settings()->get("TheCat").toBool());
 }
 
 void MainWindow::on_actionAbout_triggered()

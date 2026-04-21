@@ -184,9 +184,6 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionChangeTheme"/>
-    <addaction name="separator"/>
-    <addaction name="actionCAT"/>
     <addaction name="actionToggleStatusBar"/>
     <addaction name="actionLockToolbars"/>
     <addaction name="separator"/>
@@ -205,9 +202,6 @@
     <addaction name="actionViewSkinsFolder"/>
     <addaction name="actionViewJavaFolder"/>
     <addaction name="separator"/>
-    <addaction name="actionViewIconThemeFolder"/>
-    <addaction name="actionViewWidgetThemeFolder"/>
-    <addaction name="actionViewCatPackFolder"/>
     <addaction name="actionViewIconsFolder"/>
     <addaction name="separator"/>
     <addaction name="actionViewLogsFolder"/>
@@ -254,20 +248,6 @@
    </property>
    <property name="toolTip">
     <string>Open the development blog to read more news about %1.</string>
-   </property>
-  </action>
-  <action name="actionCAT">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset theme="cat"/>
-   </property>
-   <property name="text">
-    <string>&amp;Meow</string>
-   </property>
-   <property name="toolTip">
-    <string>It's a fluffy kitty :3</string>
    </property>
   </action>
   <action name="actionToggleStatusBar">
@@ -611,11 +591,6 @@
     <string>Open the logs folder in a file browser.</string>
    </property>
   </action>
-  <action name="actionChangeTheme">
-   <property name="text">
-    <string>Themes</string>
-   </property>
-  </action>
   <action name="actionReportBug">
    <property name="icon">
     <iconset theme="bug"/>
@@ -748,39 +723,6 @@
    </property>
    <property name="toolTip">
     <string>Open the %1 wiki</string>
-   </property>
-  </action>
-  <action name="actionViewWidgetThemeFolder">
-   <property name="icon">
-    <iconset theme="viewfolder"/>
-   </property>
-   <property name="text">
-    <string>&amp;Widget Themes</string>
-   </property>
-   <property name="toolTip">
-    <string>Open the widget themes folder in a file browser.</string>
-   </property>
-  </action>
-  <action name="actionViewIconThemeFolder">
-   <property name="icon">
-    <iconset theme="viewfolder"/>
-   </property>
-   <property name="text">
-    <string>I&amp;con Theme</string>
-   </property>
-   <property name="toolTip">
-    <string>Open the icon theme folder in a file browser.</string>
-   </property>
-  </action>
-  <action name="actionViewCatPackFolder">
-   <property name="icon">
-    <iconset theme="viewfolder"/>
-   </property>
-   <property name="text">
-    <string>Cat Packs</string>
-   </property>
-   <property name="toolTip">
-    <string>Open the cat packs folder in a file browser.</string>
    </property>
   </action>
   <action name="actionViewJavaFolder">

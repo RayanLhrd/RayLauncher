@@ -657,11 +657,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         bool isWinter = now.month() >= 12 || now.month() <= 2;
 
-        // Theming
+        // Theming — only IconTheme is live; ApplicationTheme is a leftover key the soon-to-be-
+        // removed ThemeManager still reads but no longer acts on. BackgroundCat/Snow/TheCat/
+        // CatOpacity/CatFit registrations removed along with the cat pack + snow subsystems.
         m_settings->registerSetting("IconTheme", QString("flat_white"));
         m_settings->registerSetting("ApplicationTheme", QString("freesm"));
-        m_settings->registerSetting("BackgroundCat", QString("typescript"));
-        m_settings->registerSetting("Snow", isWinter);
 
         // Remembered state
         m_settings->registerSetting("LastUsedGroupForNewInstance", QString());
@@ -846,12 +846,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting({ "PreLaunchCommand", "PreLaunchCmd" }, "");
         m_settings->registerSetting({ "PostExitCommand", "PostExitCmd" }, "");
 
-        // The cat
-        m_settings->registerSetting("TheCat", true);
-        m_settings->registerSetting("CatOpacity", 100);
-        m_settings->registerSetting("CatFit", "fit");
-
-        m_settings->registerSetting("CopyIngameScreenshots", false);
+        // Cat + in-game-screenshot-to-clipboard settings dropped — subsystems removed.
 
         m_settings->registerSetting("StatusBarVisible", true);
 

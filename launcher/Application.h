@@ -206,8 +206,7 @@ class Application : public QApplication {
     void updateAllowedChanged(bool status);
     void globalSettingsAboutToOpen();
     void globalSettingsApplied();
-    int currentCatChanged(int index);
-    void currentSnowChanged(bool visible);
+    // currentCatChanged / currentSnowChanged removed — no more cat/snow background effects.
 
     void oauthReplyRecieved(QVariantMap);
 

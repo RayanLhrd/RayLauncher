@@ -43,7 +43,7 @@
 #include <QScrollBar>
 #include <functional>
 #include "VisualGroup.h"
-#include "ui/themes/CatPainter.h"
+// CatPainter removed — cat-background subsystem deleted in the visual overhaul.
 
 struct InstanceViewRoles {
     enum { GroupRole = Qt::UserRole, ProgressValueRole, ProgressMaximumRole };
@@ -80,12 +80,9 @@ class InstanceView : public QAbstractItemView {
     virtual QRegion visualRegionForSelection(const QItemSelection& selection) const override;
 
     int spacing() const { return m_spacing; };
-    void setPaintCat(bool visible);
 
    public slots:
     virtual void updateGeometries() override;
-    void setPaintSnow(bool visible);
-    void onCurrentSnowChanged(bool visible);
 
    protected slots:
     virtual void dataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight, const QList<int>& roles) override;
@@ -118,21 +115,7 @@ class InstanceView : public QAbstractItemView {
     void updateScrollbar();
 
    private:
-    struct Snowflake {
-        Snowflake() : movementX(0), movementY(0), oscillationAmplitude(0), oscillationPhase(0), radius(0), transparency(0), position(0, 0)
-        {}
-
-        double movementX;
-        double movementY;
-
-        double oscillationAmplitude;
-        double oscillationPhase;
-
-        int radius;
-        double transparency;
-        QPointF position;
-    };
-
+    // Snowflake struct and its animation machinery removed in the visual overhaul.
     friend struct VisualGroup;
     QList<VisualGroup*> m_groups;
 
@@ -148,10 +131,7 @@ class InstanceView : public QAbstractItemView {
     int m_currentItemsPerRow = -1;
     int m_currentCursorColumn = -1;
     mutable QCache<int, QRect> m_geometryCache;
-    CatPainter* m_cat = nullptr;
-    bool m_snowVisible = false;
-    std::vector<Snowflake> m_snowflakes;
-    QTimer* m_snowTimer = nullptr;
+    // m_cat / m_snowflakes / m_snowTimer / m_snowVisible removed with the background layers.
 
     // point where the currently active mouse action started in geometry coordinates
     QPoint m_pressedPosition;
@@ -174,11 +154,6 @@ class InstanceView : public QAbstractItemView {
     int verticalScrollToValue(const QModelIndex& index, const QRect& rect, QListView::ScrollHint hint) const;
     QPixmap renderToPixmap(const QModelIndexList& indices, QRect* r) const;
     QList<std::pair<QRect, QModelIndex>> draggablePaintPairs(const QModelIndexList& indices, QRect* r) const;
-
-    void updateSnowflakesPosition();
-    Snowflake createSnowflake() const;
-
-    void drawSnow(QPainter& painter);
 
     bool isDragEventAccepted(QDropEvent* event);
 

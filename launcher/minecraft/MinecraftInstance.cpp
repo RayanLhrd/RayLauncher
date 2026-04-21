@@ -40,7 +40,7 @@
 #include "BuildConfig.h"
 #include "Json.h"
 #include "QObjectPtr.h"
-#include "minecraft/ScreenshotsWatcher.h"
+// ScreenshotsWatcher removed — in-game screenshot-to-clipboard feature gone.
 #include "minecraft/launch/AutoInstallJava.h"
 #include "minecraft/launch/CreateGameFolders.h"
 #include "minecraft/launch/ExtractNatives.h"
@@ -168,8 +168,7 @@ MinecraftInstance::MinecraftInstance(SettingsObjectPtr globalSettings, SettingsO
     : BaseInstance(globalSettings, settings, rootDir)
 {
     m_components.reset(new PackProfile(this));
-    // TODO: move it elsewhere
-    connect(this, &BaseInstance::runningStatusChanged, [this]() { updateScreenshotsWatcherState(); });
+    // Screenshot watcher hook removed — feature deleted in the visual-overhaul cleanup.
 }
 
 void MinecraftInstance::saveNow()
@@ -236,7 +235,7 @@ void MinecraftInstance::loadSpecificSettings()
         auto miscellaneousOverride = m_settings->registerSetting("OverrideMiscellaneous", false);
         m_settings->registerOverride(global_settings->getSetting("CloseAfterLaunch"), miscellaneousOverride);
         m_settings->registerOverride(global_settings->getSetting("QuitAfterGameStop"), miscellaneousOverride);
-        m_settings->registerOverride(global_settings->getSetting("CopyIngameScreenshots"), miscellaneousOverride);
+        // CopyIngameScreenshots override removed — the feature's global setting is gone.
 
         // Elyby
         auto elybyOverride = m_settings->registerSetting("OverrideElyby", false);
@@ -1362,16 +1361,6 @@ QList<Mod*> MinecraftInstance::getJarMods() const
     return mods;
 }
 
-void MinecraftInstance::updateScreenshotsWatcherState()
-{
-    if (m_settings->get("CopyIngameScreenshots").toBool()) {
-        if (m_isRunning) {
-            m_screenshots_watcher.reset(new ScreenshotsWatcher(gameRoot() + "/screenshots"));
-            qDebug() << "Started watching " << gameRoot() + "/screenshots";
-        } else {
-            m_screenshots_watcher.reset();
-        }
-    }
-}
+// updateScreenshotsWatcherState() removed together with the ScreenshotsWatcher class.
 
 #include "MinecraftInstance.moc"

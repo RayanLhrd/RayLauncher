@@ -90,10 +90,6 @@ class MainWindow : public QMainWindow {
     QMenu* createPopupMenu() override;
 
    private slots:
-    void onCatToggled(bool);
-
-    void onCatChanged(int);
-
     void on_actionAbout_triggered();
 
     void on_actionAddInstance_triggered();
@@ -117,9 +113,6 @@ class MainWindow : public QMainWindow {
     void on_actionViewInstanceFolder_triggered();
     void on_actionViewCentralModsFolder_triggered();
 
-    void on_actionViewIconThemeFolder_triggered();
-    void on_actionViewWidgetThemeFolder_triggered();
-    void on_actionViewCatPackFolder_triggered();
     void on_actionViewIconsFolder_triggered();
     void on_actionViewLogsFolder_triggered();
     void on_actionViewJavaFolder_triggered();
@@ -225,7 +218,6 @@ class MainWindow : public QMainWindow {
 
     void addInstance(const QString& url = QString(), const QMap<QString, QString>& extra_info = {});
     void activateInstance(InstancePtr instance);
-    void setCatBackground(bool enabled);
     void updateInstanceToolIcon(QString new_icon);
     void setSelectedInstanceById(const QString& id);
     void updateStatusCenter();

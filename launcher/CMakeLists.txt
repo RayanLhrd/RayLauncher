@@ -337,8 +337,7 @@ set(MINECRAFT_SOURCES
     minecraft/ParseUtils.h
     minecraft/ProfileUtils.cpp
     minecraft/ProfileUtils.h
-    minecraft/ScreenshotsWatcher.cpp
-    minecraft/ScreenshotsWatcher.h
+    # ScreenshotsWatcher removed — in-game screenshot-to-clipboard feature deleted.
     minecraft/ShortcutUtils.cpp
     minecraft/ShortcutUtils.h
     minecraft/Library.cpp
@@ -947,10 +946,7 @@ SET(LAUNCHER_SOURCES
     ui/themes/RayTheme.h
     ui/themes/ThemeManager.cpp
     ui/themes/ThemeManager.h
-    ui/themes/CatPack.cpp
-    ui/themes/CatPack.h
-    ui/themes/CatPainter.cpp
-    ui/themes/CatPainter.h
+    # CatPack + CatPainter removed — animated background system gone.
 
     # Processes
     LaunchController.h

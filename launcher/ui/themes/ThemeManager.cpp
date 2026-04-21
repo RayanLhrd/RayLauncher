@@ -26,10 +26,9 @@
 #include <QStyle>
 #include <QStyleFactory>
 #include "Exception.h"
-// Legacy widget theme includes removed as part of the visual-overhaul cleanup — RayTheme is
-// now the single source of truth for the application's look. Icon theme handling (Fluent/flat)
-// stays here because it's orthogonal and the Qt icon system genuinely uses it.
-#include "ui/themes/CatPack.h"
+// Legacy widget theme includes + CatPack include removed as part of the visual-overhaul
+// cleanup — RayTheme is the single source of truth for the application's look. Only icon
+// theme plumbing (Fluent/flat) remains here because Qt's icon system genuinely uses it.
 
 #include "Application.h"
 
@@ -46,7 +45,7 @@ ThemeManager::ThemeManager()
     m_defaultPalette = QApplication::palette();
 
     initializeThemes();
-    initializeCatPacks();
+    // initializeCatPacks() removed — no animated backgrounds.
 }
 
 ThemeManager::~ThemeManager()
@@ -163,15 +162,7 @@ QList<ITheme*> ThemeManager::getValidApplicationThemes()
     return ret;
 }
 
-QList<CatPack*> ThemeManager::getValidCatPacks()
-{
-    QList<CatPack*> ret;
-    ret.reserve(m_catPacks.size());
-    for (auto&& [id, theme] : m_catPacks) {
-        ret.append(theme.get());
-    }
-    return ret;
-}
+// getValidCatPacks() / getCatPack() / addCatPack() / initializeCatPacks() removed — no cats.
 
 bool ThemeManager::isValidIconTheme(const QString& id)
 {
@@ -193,10 +184,7 @@ QDir ThemeManager::getApplicationThemesFolder()
     return m_applicationThemeFolder;
 }
 
-QDir ThemeManager::getCatPacksFolder()
-{
-    return m_catPacksFolder;
-}
+// getCatPacksFolder() removed.
 
 void ThemeManager::setIconTheme(const QString& name)
 {
@@ -237,103 +225,9 @@ void ThemeManager::applyCurrentlySelectedTheme(bool initial)
     themeDebugLog() << "<> Application theme set.";
 }
 
-QString ThemeManager::getCatPack(QString catName)
-{
-    auto catIter = m_catPacks.find(!catName.isEmpty() ? catName : APPLICATION->settings()->get("BackgroundCat").toString());
-    if (catIter != m_catPacks.end()) {
-        auto& catPack = catIter->second;
-        themeDebugLog() << "applying catpack" << catPack->id();
-        return catPack->path();
-    } else {
-        themeWarningLog() << "Tried to get invalid catPack:" << catName;
-    }
-
-    return m_catPacks.begin()->second->path();
-}
-
-QString ThemeManager::addCatPack(std::unique_ptr<CatPack> catPack)
-{
-    QString id = catPack->id();
-    if (m_catPacks.find(id) == m_catPacks.end())
-        m_catPacks.emplace(id, std::move(catPack));
-    else
-        themeWarningLog() << "CatPack(" << id << ") not added to prevent id duplication";
-    return id;
-}
-
-void ThemeManager::initializeCatPacks()
-{
-    QList<std::pair<QString, QString>> defaultCats{ { "kitteh", QObject::tr("Background Cat (from MultiMC)") },
-                                                    { "rory", QObject::tr("Rory ID 11 (drawn by Ashtaka)") },
-                                                    { "rory-flat", QObject::tr("Rory ID 11 (flat edition, drawn by Ashtaka)") },
-                                                    { "teawie", QObject::tr("Teawie (drawn by SympathyTea)") } };
-    for (auto [id, name] : defaultCats) {
-        addCatPack(std::unique_ptr<CatPack>(new BasicCatPack(id, name)));
-    }
-
-    QList<std::pair<QString, QString>> freesmCats{ { "typescript", QObject::tr("You should have used Typescript") },
-                                                   { "miside-screenshot", QObject::tr("MiSide Screenshot") },
-                                                   { "maxwell-christmas-gif", QObject::tr("Maxwell Christmas Cat") },
-                                                   { "konata-gif", QObject::tr("Low-poly Konata") },
-                                                   { "cucumbers", QObject::tr("Cucumbers") } };
-    for (const auto& [id, name] : freesmCats) {
-        addCatPack(std::make_unique<FreesmCatPack>(id, name));
-    }
-
-    if (!m_catPacksFolder.mkpath("."))
-        themeWarningLog() << "Couldn't create catpacks folder";
-    themeDebugLog() << "CatPacks Folder Path:" << m_catPacksFolder.absolutePath();
-
-    QStringList supportedImageFormats;
-    for (auto format : QImageReader::supportedImageFormats()) {
-        supportedImageFormats.append("*." + format);
-    }
-
-    // add gif support
-    supportedImageFormats.append("*.gif");
-
-    auto loadFiles = [this, supportedImageFormats](QDir dir) {
-        // Load image files directly
-        QDirIterator ImageFileIterator(dir.absoluteFilePath(""), supportedImageFormats, QDir::Files);
-        while (ImageFileIterator.hasNext()) {
-            QFile customCatFile(ImageFileIterator.next());
-            QFileInfo customCatFileInfo(customCatFile);
-            themeDebugLog() << "Loading CatPack from:" << customCatFileInfo.absoluteFilePath();
-
-            if (customCatFileInfo.suffix() == "gif") {
-                addCatPack(std::unique_ptr<CatPack>(new GifCatPack(customCatFileInfo)));
-            } else {
-                addCatPack(std::unique_ptr<CatPack>(new FileCatPack(customCatFileInfo)));
-            }
-        }
-    };
-
-    loadFiles(m_catPacksFolder);
-
-    QDirIterator directoryIterator(m_catPacksFolder.path(), QDir::Dirs | QDir::NoDotAndDotDot);
-    while (directoryIterator.hasNext()) {
-        QDir dir(directoryIterator.next());
-        QFileInfo manifest(dir.absoluteFilePath("catpack.json"));
-        if (manifest.isFile()) {
-            try {
-                // Load background manifest
-                themeDebugLog() << "Loading background manifest from:" << manifest.absoluteFilePath();
-                addCatPack(std::unique_ptr<CatPack>(new JsonCatPack(manifest)));
-            } catch (const Exception& e) {
-                themeWarningLog() << "Couldn't load catpack json:" << e.cause();
-            }
-        } else {
-            loadFiles(dir);
-        }
-    }
-}
-
 void ThemeManager::refresh()
 {
     m_themes.clear();
     m_icons.clear();
-    m_catPacks.clear();
-
     initializeThemes();
-    initializeCatPacks();
 }
