@@ -486,6 +486,15 @@ elseif(WIN32)
     set(PLUGIN_DEST_DIR ".")
     set(RESOURCES_DEST_DIR ".")
     set(JARS_DEST_DIR "jars")
+
+    # Ship the bundled .qm translation files alongside the exe. At startup the app copies
+    # any missing file from here into the writable data dir so the French UI works on a
+    # fresh install without needing the Prism i18n server.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/translations_bundled")
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/translations_bundled/"
+                DESTINATION "translations_bundled"
+                FILES_MATCHING PATTERN "*.qm")
+    endif()
 else()
     message(FATAL_ERROR "Platform not supported")
 endif()

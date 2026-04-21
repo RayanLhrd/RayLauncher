@@ -727,7 +727,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("JsonEditor", QString());
 
         // Language — default to French so a fresh install skips the language wizard page.
-        m_settings->registerSetting("Language", QString("fr_FR"));
+        // Note: the Prism translation index keys are ISO 639-1 ("fr"), not locale pairs ("fr_FR").
+        // Setting fr_FR here means selectLanguage() fails lookup and falls back to English; the
+        // migration block below also corrects any "fr_FR" value left over from earlier builds.
+        m_settings->registerSetting("Language", QString("fr"));
         m_settings->registerSetting("UseSystemLocale", false);
 
         // Remember the last offline username so the Add Offline dialog pre-fills with what the
@@ -738,13 +741,21 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // One-time migration for users coming from an existing Freesm/Prism config.ini: force
         // French language and clear the stale saved MainWindowState (which kept the toolbar
         // movable on upgrades because Qt's saveState ignored our new lockdown defaults).
-        // The flag itself is registered so we only run this once per profile.
-        m_settings->registerSetting("RayLauncher_FirstRunMigrationDone", false);
-        if (!m_settings->get("RayLauncher_FirstRunMigrationDone").toBool()) {
-            m_settings->set("Language", QString("fr_FR"));
+        // v2 of the flag — the previous iteration wrote "fr_FR" which isn't a valid key in
+        // the Prism translation index (keys are ISO 639-1 like "fr"). That silently broke
+        // the French UI on all earlier RayLauncher builds. We re-run the migration once more
+        // with the correct "fr" code.
+        m_settings->registerSetting("RayLauncher_FirstRunMigrationDone_v2", false);
+        if (!m_settings->get("RayLauncher_FirstRunMigrationDone_v2").toBool()) {
+            m_settings->set("Language", QString("fr"));
             m_settings->set("MainWindowState", QString());
             m_settings->set("ToolbarsLocked", true);
-            m_settings->set("RayLauncher_FirstRunMigrationDone", true);
+            m_settings->set("RayLauncher_FirstRunMigrationDone_v2", true);
+        }
+        // Always-on corrective: if a previous build stamped an invalid "fr_FR" code, quietly
+        // rewrite it to "fr" regardless of migration state. Idempotent.
+        if (m_settings->get("Language").toString() == QStringLiteral("fr_FR")) {
+            m_settings->set("Language", QString("fr"));
         }
 
         // Console
@@ -982,6 +993,27 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     // load translations
     {
+        // Before TranslationsModel scans the on-disk translations/ folder, bootstrap it with any
+        // .qm files we shipped in the installer. TranslationsModel only reads from the writable
+        // data dir ("translations" relative to cwd, which is dataPath); translation packs live
+        // alongside the binary under <install>/translations_bundled/. Copy missing files across
+        // so the French UI works on the very first launch even without internet to hit the
+        // Prism i18n server. This is a no-op once the data dir already has the file.
+        {
+            const QString bundledDir = FS::PathCombine(applicationDirPath(), "translations_bundled");
+            const QString runtimeDir = QStringLiteral("translations");
+            FS::ensureFolderPathExists(runtimeDir);
+            QDir bundled(bundledDir);
+            if (bundled.exists()) {
+                for (const QString& entry : bundled.entryList(QDir::Files)) {
+                    const QString dest = FS::PathCombine(runtimeDir, entry);
+                    if (!QFile::exists(dest)) {
+                        QFile::copy(FS::PathCombine(bundledDir, entry), dest);
+                    }
+                }
+            }
+        }
+
         m_translations.reset(new TranslationsModel("translations"));
         auto bcp47Name = m_settings->get("Language").toString();
         m_translations->selectLanguage(bcp47Name);

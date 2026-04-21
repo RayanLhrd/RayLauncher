@@ -1,2 +1,5 @@
 *.pem -crlf
 **/testdata/** -text -diff
+*.qm binary
+*.ico binary
+*.icns binary
