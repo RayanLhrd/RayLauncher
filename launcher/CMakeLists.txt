@@ -606,6 +606,8 @@ set(PACKWIZ_SOURCES
 set(RAYLAUNCHER_SOURCES
     modplatform/raylauncher/RayModpackIndex.h
     modplatform/raylauncher/RayModpackIndex.cpp
+    modplatform/raylauncher/RayModpackUpdater.h
+    modplatform/raylauncher/RayModpackUpdater.cpp
 )
 
 

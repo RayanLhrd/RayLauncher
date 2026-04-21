@@ -102,6 +102,7 @@
 #include "ui/dialogs/IconPickerDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
+#include "modplatform/raylauncher/RayModpackUpdater.h"
 #include "ui/pages/modplatform/raylauncher/RayModpackPage.h"
 #include "InstanceImportTask.h"
 #include "ui/dialogs/NewsDialog.h"
@@ -1043,11 +1044,46 @@ void MainWindow::playRayInstance(const QString& instanceId)
     APPLICATION->launch(inst);
 }
 
-void MainWindow::updateRayModpack(const RayModpack& /*pack*/, const QString& /*instanceId*/)
+void MainWindow::updateRayModpack(const RayModpack& pack, const QString& instanceId)
 {
-    // Wired up for RayModpackCard::updateClicked but not yet triggered — the card only enters
-    // the UpdateAvailable state once we store the installed pack's version in instance.cfg,
-    // which arrives in the next commit alongside the keybind-preserving re-import task.
+    InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+    if (!inst) {
+        CustomMessageBox::selectable(this, tr("Erreur"), tr("Instance introuvable."), QMessageBox::Critical)->show();
+        return;
+    }
+    if (inst->isRunning()) {
+        CustomMessageBox::selectable(this, tr("Minecraft tourne"),
+                                     tr("Ferme d'abord Minecraft avant de mettre à jour ce modpack."), QMessageBox::Warning)
+            ->show();
+        return;
+    }
+
+    // The update wipes the instance directory and re-downloads the pack. Surface this clearly —
+    // mods/configs/resourcepacks the user added manually, plus screenshots and saves, are gone.
+    // Comfort settings in options.txt (keybinds, FOV, sensitivity, volumes, GUI scale, etc.)
+    // are preserved by the RayModpackUpdater task.
+    const auto choice =
+        CustomMessageBox::selectable(this, tr("Mettre à jour %1 ?").arg(pack.name),
+                                     tr("Cette mise à jour remplace les mods, resource packs, shaders et configs du pack.\n\n"
+                                        "Tes paramètres perso (touches, FOV, sensibilité souris, volumes, GUI scale…) sont "
+                                        "conservés automatiquement.\n\n"
+                                        "⚠️ Les mods que tu aurais ajoutés à la main, ainsi que tes sauvegardes et captures "
+                                        "d'écran de cette instance, seront supprimés.\n\nContinuer ?"),
+                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+            ->exec();
+    if (choice != QMessageBox::Yes)
+        return;
+
+    // Run the updater through our simplified progress dialog.
+    auto* task = new RayModpackUpdater(pack, inst, this);
+    connect(task, &Task::failed, this,
+            [this](QString reason) { CustomMessageBox::selectable(this, tr("Erreur"), reason, QMessageBox::Critical)->show(); });
+
+    RaySimpleProgressDialog dlg(this);
+    dlg.setWindowTitle(tr("Mise à jour"));
+    dlg.setHeadline(tr("Mise à jour de %1…").arg(pack.name));
+    dlg.execWithTask(task);
+    task->deleteLater();
 }
 
 void MainWindow::processURLs(QList<QUrl> urls)

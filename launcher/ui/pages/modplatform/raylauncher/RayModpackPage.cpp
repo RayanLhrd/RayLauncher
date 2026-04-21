@@ -158,7 +158,22 @@ void RayModpackPage::rebuildTiles()
         const QString instId = installedInstanceIdFor(pack);
         if (!instId.isEmpty())
             matchedInstanceIds.insert(instId);
-        const auto state = instId.isEmpty() ? RayModpackCard::State::Available : RayModpackCard::State::Installed;
+
+        RayModpackCard::State state;
+        if (instId.isEmpty()) {
+            state = RayModpackCard::State::Available;
+        } else if (!pack.version.isEmpty()) {
+            // Compare the version stamped on the instance (RayLauncher_ModpackVersion, set by
+            // the install flow) against the one advertised in the catalogue. A mismatch means
+            // the user has an older build and can upgrade.
+            InstancePtr inst = APPLICATION->instances()->getInstanceById(instId);
+            const QString installedVer =
+                inst ? inst->settings()->get(QStringLiteral("RayLauncher_ModpackVersion")).toString() : QString();
+            state = (!installedVer.isEmpty() && installedVer != pack.version) ? RayModpackCard::State::UpdateAvailable
+                                                                              : RayModpackCard::State::Installed;
+        } else {
+            state = RayModpackCard::State::Installed;
+        }
         addTile(pack, state, instId);
     }
 
