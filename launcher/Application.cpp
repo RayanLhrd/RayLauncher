@@ -317,7 +317,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     setOrganizationName(BuildConfig.LAUNCHER_NAME);
     setOrganizationDomain(BuildConfig.LAUNCHER_DOMAIN);
     setApplicationName(BuildConfig.LAUNCHER_NAME);
-    setApplicationDisplayName(QString("%1 %2").arg(BuildConfig.LAUNCHER_DISPLAYNAME, BuildConfig.printableVersionString()));
+    // Window title is just "RayLauncher" — the version + channel suffix the upstream Prism
+    // launcher displays ("Maple 2.1.2-main") looked like leftover dev metadata to friends.
+    setApplicationDisplayName(BuildConfig.LAUNCHER_DISPLAYNAME);
     setApplicationVersion(BuildConfig.printableVersionString() + "\n" + BuildConfig.GIT_COMMIT);
     setDesktopFileName(BuildConfig.LAUNCHER_APPID);
     m_startTime = QDateTime::currentDateTime();
@@ -733,6 +735,18 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // once, and any subsequent offline-account-add starts with that pseudo pre-populated.
         m_settings->registerSetting("LastOfflineUsername", QString());
 
+        // One-time migration for users coming from an existing Freesm/Prism config.ini: force
+        // French language and clear the stale saved MainWindowState (which kept the toolbar
+        // movable on upgrades because Qt's saveState ignored our new lockdown defaults).
+        // The flag itself is registered so we only run this once per profile.
+        m_settings->registerSetting("RayLauncher_FirstRunMigrationDone", false);
+        if (!m_settings->get("RayLauncher_FirstRunMigrationDone").toBool()) {
+            m_settings->set("Language", QString("fr_FR"));
+            m_settings->set("MainWindowState", QString());
+            m_settings->set("ToolbarsLocked", true);
+            m_settings->set("RayLauncher_FirstRunMigrationDone", true);
+        }
+
         // Console
         m_settings->registerSetting("ShowConsole", false);
         m_settings->registerSetting("AutoCloseConsole", false);
@@ -821,7 +835,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         m_settings->registerSetting("StatusBarVisible", true);
 
-        m_settings->registerSetting("ToolbarsLocked", false);
+        m_settings->registerSetting("ToolbarsLocked", true);
 
         // Instance
         m_settings->registerSetting("InstSortMode", "Name");
