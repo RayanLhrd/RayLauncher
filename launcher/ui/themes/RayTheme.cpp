@@ -246,9 +246,33 @@ const char* kGlobalStyleSheetTemplate = R"QSS(
     QListView::item, QTreeView::item, QTableView::item, QListWidget::item, QTreeWidget::item {
         padding: 6px;
         border-radius: 4px;
+        color: %TEXT_PRIMARY%;
     }
     QListView::item:hover, QTreeView::item:hover, QListWidget::item:hover, QTreeWidget::item:hover {
         background-color: %BG_RAISED_HOVER%;
+        color: %TEXT_PRIMARY%;
+    }
+    /* Explicit ::item:selected rules — Fusion + QPalette fallback can paint a dark highlight
+       on a dark row otherwise (the infamous "black text on black row" case reported in use). */
+    QListView::item:selected,
+    QTreeView::item:selected,
+    QTableView::item:selected,
+    QListWidget::item:selected,
+    QTreeWidget::item:selected,
+    QTableWidget::item:selected {
+        background-color: %ACCENT%;
+        color: %BG_BASE%;
+    }
+    /* Inactive state (window not focused): keep the accent selection visible instead of
+       falling back to the Qt-default washed-out blue. */
+    QListView::item:selected:!active,
+    QTreeView::item:selected:!active,
+    QTableView::item:selected:!active,
+    QListWidget::item:selected:!active,
+    QTreeWidget::item:selected:!active,
+    QTableWidget::item:selected:!active {
+        background-color: %ACCENT%;
+        color: %BG_BASE%;
     }
     QHeaderView::section {
         background-color: %BG_RAISED%;
@@ -487,6 +511,14 @@ void RayTheme::applyGlobalStyle()
     pal.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(kTextSecondary));
     pal.setColor(QPalette::Disabled, QPalette::Highlight, QColor(kBorder));
     pal.setColor(QPalette::Disabled, QPalette::HighlightedText, QColor(kTextSecondary));
+
+    // Inactive variants (window lost focus but item still selected) — Qt defaults here to a
+    // washed-out system highlight that combined with our dark HighlightedText sometimes paints
+    // dark text on a dark background. Pin the active accent in every palette group.
+    pal.setColor(QPalette::Inactive, QPalette::Highlight, QColor(kAccent));
+    pal.setColor(QPalette::Inactive, QPalette::HighlightedText, QColor(kBgBase));
+    pal.setColor(QPalette::Inactive, QPalette::Text, QColor(kTextPrimary));
+    pal.setColor(QPalette::Inactive, QPalette::WindowText, QColor(kTextPrimary));
 
     QApplication::setPalette(pal);
     // setStyleSheet is a non-static slot on QApplication — has to go through the singleton.

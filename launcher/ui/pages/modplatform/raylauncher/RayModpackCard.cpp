@@ -67,12 +67,25 @@ RayModpackCard::RayModpackCard(const RayModpack& pack, State state, const QStrin
     m_nameLabel->setFont(nameFont);
     root->addWidget(m_nameLabel);
 
-    // Optional description — small, dimmed, elided if too long.
-    m_descriptionLabel = new QLabel(pack.description, this);
+    // Optional description — small, dimmed, truncated with an ellipsis if it would overflow
+    // the two lines the fixed tile allocates. Full text lives in the tooltip so the user can
+    // still read it on hover without letting long descriptions squeeze the icon out of place.
+    QString shortDesc = pack.description;
+    constexpr int kMaxDescLen = 75;
+    if (shortDesc.length() > kMaxDescLen) {
+        int cut = kMaxDescLen;
+        const int nearestSpace = shortDesc.lastIndexOf(QLatin1Char(' '), cut);
+        if (nearestSpace > kMaxDescLen - 15)
+            cut = nearestSpace;
+        shortDesc = shortDesc.left(cut).trimmed() + QStringLiteral("…");
+    }
+    m_descriptionLabel = new QLabel(shortDesc, this);
     m_descriptionLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
     m_descriptionLabel->setWordWrap(true);
-    // Bright text — palette(mid) was too close to the raised-card background for comfort.
+    m_descriptionLabel->setMaximumHeight(36);  // two lines at 11px — matches the stretch budget.
     m_descriptionLabel->setStyleSheet("color: #E6EDF3; font-size: 11px;");
+    if (!pack.description.isEmpty())
+        m_descriptionLabel->setToolTip(pack.description);
     root->addWidget(m_descriptionLabel, 1);
 
     // Action button — the ONLY thing on the tile that triggers a user action.
