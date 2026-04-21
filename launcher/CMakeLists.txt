@@ -960,6 +960,8 @@ SET(LAUNCHER_SOURCES
     ui/themes/SystemTheme.h
     ui/themes/IconTheme.cpp
     ui/themes/IconTheme.h
+    ui/themes/RayTheme.cpp
+    ui/themes/RayTheme.h
     ui/themes/ThemeManager.cpp
     ui/themes/ThemeManager.h
     ui/themes/CatPack.cpp

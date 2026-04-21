@@ -82,6 +82,7 @@
 
 #include "ui/pagedialog/PageDialog.h"
 
+#include "ui/themes/RayTheme.h"
 #include "ui/themes/ThemeManager.h"
 
 #include "ApplicationMessage.h"
@@ -1278,6 +1279,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     }
 
     m_themeManager->applyCurrentlySelectedTheme(true);
+    // Final word on the look — override whatever ThemeManager put in with our single locked-in
+    // RayTheme. ThemeManager will be fully removed in Commit B; for now we just paint over it.
+    RayTheme::applyGlobalStyle();
     performMainStartupAction();
 }
 
@@ -1326,6 +1330,9 @@ bool Application::createSetupWizard()
         }
 
         m_themeManager->applyCurrentlySelectedTheme(true);
+        // Same override as the main path — stay on the locked RayLauncher look regardless
+        // of what the wizard settings told ThemeManager to pick.
+        RayTheme::applyGlobalStyle();
 
         m_setupWizard = new SetupWizard(nullptr);
         if (languageRequired) {
