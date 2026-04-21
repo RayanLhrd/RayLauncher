@@ -26,14 +26,10 @@
 #include <QStyle>
 #include <QStyleFactory>
 #include "Exception.h"
-#include "ui/themes/BrightTheme.h"
+// Legacy widget theme includes removed as part of the visual-overhaul cleanup — RayTheme is
+// now the single source of truth for the application's look. Icon theme handling (Fluent/flat)
+// stays here because it's orthogonal and the Qt icon system genuinely uses it.
 #include "ui/themes/CatPack.h"
-#include "ui/themes/CustomTheme.h"
-#include "ui/themes/DarkTheme.h"
-#include "ui/themes/FreesmLightTheme.h"
-#include "ui/themes/FreesmTheme.h"
-#include "ui/themes/GruvboxTheme.h"
-#include "ui/themes/SystemTheme.h"
 
 #include "Application.h"
 
@@ -135,54 +131,10 @@ void ThemeManager::initializeIcons()
 
 void ThemeManager::initializeWidgets()
 {
-    themeDebugLog() << "<> Initializing Widget Themes";
-    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<SystemTheme>(m_defaultStyle, m_defaultPalette, true));
-    auto darkThemeId = addTheme(std::make_unique<DarkTheme>());
-    themeDebugLog() << "Loading Built-in Theme:" << darkThemeId;
-    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<BrightTheme>());
-    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<FreesmTheme>());
-    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<GruvboxTheme>());
-    themeDebugLog() << "Loading Built-in Theme:" << addTheme(std::make_unique<FreesmLightTheme>());
-
-    themeDebugLog() << "<> Initializing System Widget Themes";
-    QStringList styles = QStyleFactory::keys();
-    for (auto& st : styles) {
-#ifdef Q_OS_WINDOWS
-        if (QSysInfo::productVersion() != "11" && st == "windows11") {
-            continue;
-        }
-#endif
-        themeDebugLog() << "Loading System Theme:" << addTheme(std::make_unique<SystemTheme>(st, m_defaultPalette, false));
-    }
-
-    // TODO: need some way to differentiate same name themes in different subdirectories
-    //  (maybe smaller grey text next to theme name in dropdown?)
-
-    if (!m_applicationThemeFolder.mkpath("."))
-        themeWarningLog() << "Couldn't create theme folder";
-    themeDebugLog() << "Theme Folder Path: " << m_applicationThemeFolder.absolutePath();
-
-    QDirIterator directoryIterator(m_applicationThemeFolder.path(), QDir::Dirs | QDir::NoDotAndDotDot);
-    while (directoryIterator.hasNext()) {
-        QDir dir(directoryIterator.next());
-        QFileInfo themeJson(dir.absoluteFilePath("theme.json"));
-        if (themeJson.exists()) {
-            // Load "theme.json" based themes
-            themeDebugLog() << "Loading JSON Theme from:" << themeJson.absoluteFilePath();
-            addTheme(std::make_unique<CustomTheme>(getTheme(darkThemeId), themeJson, true));
-        } else {
-            // Load pure QSS Themes
-            QDirIterator stylesheetFileIterator(dir.absoluteFilePath(""), { "*.qss", "*.css" }, QDir::Files);
-            while (stylesheetFileIterator.hasNext()) {
-                QFile customThemeFile(stylesheetFileIterator.next());
-                QFileInfo customThemeFileInfo(customThemeFile);
-                themeDebugLog() << "Loading QSS Theme from:" << customThemeFileInfo.absoluteFilePath();
-                addTheme(std::make_unique<CustomTheme>(getTheme(darkThemeId), customThemeFileInfo, false));
-            }
-        }
-    }
-
-    themeDebugLog() << "<> Widget themes initialized.";
+    // No-op since the visual overhaul. The RayTheme class takes over palette + QStyle + QSS
+    // globally; we no longer register any selectable widget themes. m_themes stays empty,
+    // which means applyCurrentlySelectedTheme() and setApplicationTheme() are also no-ops.
+    themeDebugLog() << "<> Widget theme registry is empty (RayTheme overrides globally).";
 }
 
 #ifndef Q_OS_MACOS

@@ -931,33 +931,16 @@ SET(LAUNCHER_SOURCES
     ui/setupwizard/LanguageWizardPage.h
     ui/setupwizard/PasteWizardPage.cpp
     ui/setupwizard/PasteWizardPage.h
-    ui/setupwizard/ThemeWizardPage.h
     ui/setupwizard/AutoJavaWizardPage.cpp
     ui/setupwizard/AutoJavaWizardPage.h
     ui/setupwizard/LoginWizardPage.cpp
     ui/setupwizard/LoginWizardPage.h
 
-    # GUI - themes
-    ui/themes/FusionTheme.cpp
-    ui/themes/FusionTheme.h
-    ui/themes/FreesmTheme.cpp
-    ui/themes/FreesmTheme.h
-    ui/themes/GruvboxTheme.cpp
-    ui/themes/GruvboxTheme.h
-    ui/themes/FreesmLightTheme.cpp
-    ui/themes/FreesmLightTheme.h
-    ui/themes/BrightTheme.cpp
-    ui/themes/BrightTheme.h
-    ui/themes/CustomTheme.cpp
-    ui/themes/CustomTheme.h
-    ui/themes/DarkTheme.cpp
-    ui/themes/DarkTheme.h
+    # GUI - themes (stripped to the essentials — RayTheme + icon theme plumbing + CatPack)
     ui/themes/ITheme.cpp
     ui/themes/ITheme.h
     ui/themes/HintOverrideProxyStyle.cpp
     ui/themes/HintOverrideProxyStyle.h
-    ui/themes/SystemTheme.cpp
-    ui/themes/SystemTheme.h
     ui/themes/IconTheme.cpp
     ui/themes/IconTheme.h
     ui/themes/RayTheme.cpp
@@ -1037,8 +1020,6 @@ SET(LAUNCHER_SOURCES
     ui/pages/global/MinecraftPage.h
     ui/pages/global/LauncherPage.cpp
     ui/pages/global/LauncherPage.h
-    ui/pages/global/AppearancePage.cpp
-    ui/pages/global/AppearancePage.h
     ui/pages/global/ProxyPage.cpp
     ui/pages/global/ProxyPage.h
     ui/pages/global/APIPage.cpp
@@ -1252,8 +1233,6 @@ SET(LAUNCHER_SOURCES
     ui/widgets/ProgressWidget.cpp
     ui/widgets/WideBar.h
     ui/widgets/WideBar.cpp
-    ui/widgets/AppearanceWidget.h
-    ui/widgets/AppearanceWidget.cpp
     ui/widgets/MinecraftSettingsWidget.h
     ui/widgets/MinecraftSettingsWidget.cpp
     ui/widgets/JavaSettingsWidget.h
@@ -1343,7 +1322,6 @@ qt_wrap_ui(LAUNCHER_UI
     ui/widgets/InfoFrame.ui
     ui/widgets/ModFilterWidget.ui
     ui/widgets/SubTaskProgressBar.ui
-    ui/widgets/AppearanceWidget.ui
     ui/widgets/MinecraftSettingsWidget.ui
     ui/widgets/JavaSettingsWidget.ui
     ui/dialogs/CopyInstanceDialog.ui

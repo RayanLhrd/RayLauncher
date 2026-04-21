@@ -62,7 +62,7 @@
 #include "ui/pages/BasePageProvider.h"
 #include "ui/pages/global/APIPage.h"
 #include "ui/pages/global/AccountListPage.h"
-#include "ui/pages/global/AppearancePage.h"
+// AppearancePage removed in the visual-overhaul cleanup; RayTheme is the single locked-in look.
 #include "ui/pages/global/ExternalToolsPage.h"
 #include "ui/pages/global/JavaPage.h"
 #include "ui/pages/global/LanguagePage.h"
@@ -76,7 +76,7 @@
 #include "ui/setupwizard/LoginWizardPage.h"
 #include "ui/setupwizard/PasteWizardPage.h"
 #include "ui/setupwizard/SetupWizard.h"
-#include "ui/setupwizard/ThemeWizardPage.h"
+// ThemeWizardPage removed — RayLauncher ships a single locked theme, no wizard-time choice.
 
 #include "ui/dialogs/CustomMessageBox.h"
 
@@ -970,7 +970,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
             m_globalSettingsProvider = std::make_shared<GenericPageProvider>(tr("Settings"));
             m_globalSettingsProvider->addPage<LauncherPage>();
             m_globalSettingsProvider->addPage<LanguagePage>();
-            m_globalSettingsProvider->addPage<AppearancePage>();
+            // AppearancePage entry deleted — RayLauncher ships with a single locked-in look.
             m_globalSettingsProvider->addPage<MinecraftPage>();
             m_globalSettingsProvider->addPage<JavaPage>();
             m_globalSettingsProvider->addPage<AccountListPage>();
@@ -1317,29 +1317,13 @@ bool Application::createSetupWizard()
                    !settings()->get("AutomaticJavaSwitch").toBool() && !settings()->get("UserAskedAboutAutomaticJavaDownload").toBool();
     bool languageRequired = settings()->get("Language").toString().isEmpty();
     bool pasteInterventionRequired = settings()->get("PastebinURL") != "";
-    bool validWidgets = m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString());
-    bool validIcons = m_themeManager->isValidIconTheme(settings()->get("IconTheme").toString());
     bool login = !m_accounts->anyAccountIsValid() && capabilities() & Application::SupportsMSA;
-    bool themeInterventionRequired = !validWidgets || !validIcons;
-    bool wizardRequired = javaRequired || languageRequired || pasteInterventionRequired || themeInterventionRequired || askjava || login;
+    // Theme intervention is never required anymore: RayTheme is the single locked-in look.
+    bool wizardRequired = javaRequired || languageRequired || pasteInterventionRequired || askjava || login;
     if (wizardRequired) {
-        // set default theme after going into theme wizard
-        if (!validIcons)
-            settings()->set("IconTheme", QString("fluent_dark"));
-        if (!validWidgets) {
-#if defined(Q_OS_WIN32) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-            const QString style =
-                QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QStringLiteral("dark") : QStringLiteral("bright");
-#else
-            const QString style = QStringLiteral("freesm");
-#endif
-
-            settings()->set("ApplicationTheme", style);
-        }
-
         m_themeManager->applyCurrentlySelectedTheme(true);
         // Same override as the main path — stay on the locked RayLauncher look regardless
-        // of what the wizard settings told ThemeManager to pick.
+        // of what any residual legacy settings told ThemeManager.
         RayTheme::applyGlobalStyle();
 
         m_setupWizard = new SetupWizard(nullptr);
@@ -1357,9 +1341,7 @@ bool Application::createSetupWizard()
             m_setupWizard->addPage(new PasteWizardPage(m_setupWizard));
         }
 
-        if (themeInterventionRequired) {
-            m_setupWizard->addPage(new ThemeWizardPage(m_setupWizard));
-        }
+        // Theme wizard page removed — RayLauncher has one fixed look, nothing to pick.
 
         if (login) {
             m_setupWizard->addPage(new LoginWizardPage(m_setupWizard));
