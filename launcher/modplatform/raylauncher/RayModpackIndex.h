@@ -32,6 +32,11 @@ struct RayModpack {
     QUrl iconUrl;
     QUrl mrpackUrl;
     QString version;
+    /// Author-recommended Java heap size for the pack, in MB. 0 means "no recommendation,
+    /// use the global launcher default". Pulled from the optional `recommended_memory_mb`
+    /// field on the index entry; written into MaxMemAlloc/MinMemAlloc + OverrideMemory at
+    /// install time so friends never have to touch a settings page.
+    int recommendedMemoryMb = 0;
 };
 
 class RayModpackIndexFetcher : public QObject {

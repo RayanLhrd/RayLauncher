@@ -267,6 +267,9 @@ void RayModpackPage::onCardContextMenu(const RayModpack& pack, const QString& in
         auto* playAct = menu.addAction(tr("Jouer"));
         connect(playAct, &QAction::triggered, this, [this, instanceId]() { emit playRequested(instanceId); });
 
+        auto* memoryAct = menu.addAction(tr("Mémoire allouée…"));
+        connect(memoryAct, &QAction::triggered, this, [this, pack, instanceId]() { emit memoryRequested(pack, instanceId); });
+
         auto* folderAct = menu.addAction(tr("Ouvrir le dossier"));
         connect(folderAct, &QAction::triggered, this, [this, instanceId]() { emit openFolderRequested(instanceId); });
 

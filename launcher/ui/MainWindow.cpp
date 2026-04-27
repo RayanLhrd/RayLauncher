@@ -103,6 +103,7 @@
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
 #include "modplatform/raylauncher/RayModpackUpdater.h"
+#include "ui/dialogs/RayMemoryDialog.h"
 #include "ui/pages/modplatform/raylauncher/RayModpackPage.h"
 #include "InstanceImportTask.h"
 #include "ui/dialogs/NewsDialog.h"
@@ -309,6 +310,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             APPLICATION->kill(inst);
     });
     connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
+    connect(m_modpackPage, &RayModpackPage::memoryRequested, this, &MainWindow::editRayModpackMemory);
     connect(m_modpackPage, &RayModpackPage::openFolderRequested, this, [](const QString& instanceId) {
         InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
         if (!inst)
@@ -964,6 +966,14 @@ void MainWindow::installRayModpack(const RayModpack& pack)
                             auto settings = inst->settings();
                             settings->set("RayLauncher_ModpackId", pack.id);
                             settings->set("RayLauncher_ModpackVersion", pack.version);
+                            // Author-imposed Java heap. Friends never have to touch the
+                            // memory settings page; the pack ships with what the author
+                            // tested. They can always re-tune via right-click → Mémoire.
+                            if (pack.recommendedMemoryMb > 0) {
+                                settings->set("OverrideMemory", true);
+                                settings->set("MaxMemAlloc", pack.recommendedMemoryMb);
+                                settings->set("MinMemAlloc", pack.recommendedMemoryMb);
+                            }
                             if (*conn)
                                 QObject::disconnect(*conn);
                             return;
@@ -1037,6 +1047,28 @@ void MainWindow::updateRayModpack(const RayModpack& pack, const QString& instanc
     dlg.setHeadline(tr("Mise à jour de %1…").arg(pack.name));
     dlg.execWithTask(task);
     task->deleteLater();
+}
+
+void MainWindow::editRayModpackMemory(const RayModpack& pack, const QString& instanceId)
+{
+    InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+    if (!inst) {
+        CustomMessageBox::selectable(this, tr("Erreur"), tr("Instance introuvable."), QMessageBox::Critical)->show();
+        return;
+    }
+
+    // Read the instance's current effective memory. If OverrideMemory isn't set we still want
+    // to show "what's currently used" — the global default — so the user can see the starting
+    // point and pick relative to it.
+    const int currentMb = inst->settings()->get("MaxMemAlloc").toInt();
+    const int chosenMb = RayMemoryDialog::chooseMemory(this, pack.name, currentMb, pack.recommendedMemoryMb);
+    if (chosenMb <= 0)  // -1 = cancel
+        return;
+
+    auto settings = inst->settings();
+    settings->set("OverrideMemory", true);
+    settings->set("MaxMemAlloc", chosenMb);
+    settings->set("MinMemAlloc", chosenMb);
 }
 
 void MainWindow::processURLs(QList<QUrl> urls)

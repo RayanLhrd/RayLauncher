@@ -78,6 +78,8 @@ void RayModpackIndexFetcher::onDownloadFinished()
                 pack.iconUrl = QUrl(Json::requireIsType<QString>(obj, "icon_url", "icon_url"));
             if (obj.contains("version"))
                 pack.version = Json::requireIsType<QString>(obj, "version", "version");
+            if (obj.contains("recommended_memory_mb"))
+                pack.recommendedMemoryMb = Json::requireIsType<int>(obj, "recommended_memory_mb", "recommended_memory_mb");
 
             if (!pack.mrpackUrl.isValid()) {
                 qWarning() << "Skipping modpack" << pack.id << "- invalid mrpack_url";

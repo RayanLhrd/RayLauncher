@@ -228,6 +228,7 @@ class MainWindow : public QMainWindow {
     void installRayModpack(const RayModpack& pack);
     void playRayInstance(const QString& instanceId);
     void updateRayModpack(const RayModpack& pack, const QString& instanceId);
+    void editRayModpackMemory(const RayModpack& pack, const QString& instanceId);
 
    private:
     Ui::MainWindow* ui;

@@ -46,6 +46,9 @@ class RayModpackPage : public QWidget {
     void openFolderRequested(const QString& instanceId);
     /// Delete the instance (after confirmation — caller owns the confirm dialog + the tag check).
     void deleteRequested(const QString& instanceId);
+    /// Open the "Mémoire allouée" picker for an installed instance. The pack carries the
+    /// author's recommendation; the caller resolves the current value from instance.cfg.
+    void memoryRequested(const RayModpack& pack, const QString& instanceId);
 
    private slots:
     void onIndexLoaded();
