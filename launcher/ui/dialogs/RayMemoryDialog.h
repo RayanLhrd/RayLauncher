@@ -16,7 +16,7 @@
 
 class QLabel;
 class QPushButton;
-class QSpinBox;
+class QSlider;
 
 /**
  * @brief Modal "Mémoire allouée" dialog — preset buttons (4/6/8/10 GB) + free-form spinbox.
@@ -44,12 +44,13 @@ class RayMemoryDialog : public QDialog {
 
     void selectPreset(int valueMb);  ///< Visually mark a preset as the active selection.
     void onPresetClicked(int valueMb);
-    void onSpinboxEdited();
+    void onSliderMoved(int valueMb);
 
     int m_recommendedMb;
     int m_chosenMb;
 
-    QSpinBox* m_spinBox = nullptr;
+    QSlider* m_slider = nullptr;
+    QLabel* m_valueLabel = nullptr;  ///< Live readout of the slider value, e.g. "6144 Mo".
     QList<QPushButton*> m_presetButtons;
     QList<int> m_presetValuesMb;
     QLabel* m_recommendedLabel = nullptr;  ///< The "★ Recommandé" subtitle, parented under the matching preset.

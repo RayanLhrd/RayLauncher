@@ -16,7 +16,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QSpinBox>
+#include <QSlider>
 #include <QVBoxLayout>
 
 namespace {
@@ -50,6 +50,40 @@ constexpr const char* kPresetBaseStyle = R"QSS(
     }
     QPushButton#raymem-preset[recommended="true"] {
         border: 2px solid #5BC85C;
+    }
+    /* Slider — dark thin groove, accent-coloured fill, big round handle for easy grabbing. */
+    QSlider#raymem-slider::groove:horizontal {
+        background: #0E1217;
+        height: 6px;
+        border-radius: 3px;
+    }
+    QSlider#raymem-slider::sub-page:horizontal {
+        background: #5BC85C;
+        height: 6px;
+        border-radius: 3px;
+    }
+    QSlider#raymem-slider::handle:horizontal {
+        background: #E6EDF3;
+        border: 2px solid #5BC85C;
+        width: 16px;
+        height: 16px;
+        margin: -7px 0;
+        border-radius: 10px;
+    }
+    QSlider#raymem-slider::handle:horizontal:hover {
+        background: #5BC85C;
+    }
+    /* The live value label sitting next to the slider — make it big enough that "6144 Mo"
+       never gets clipped, regardless of the dialog's chrome. */
+    QLabel#raymem-value {
+        color: #E6EDF3;
+        font-weight: 600;
+        font-size: 13px;
+        min-width: 90px;
+        padding: 4px 8px;
+        background-color: #0E1217;
+        border: 1px solid #2A323F;
+        border-radius: 6px;
     }
 )QSS";
 }  // namespace
@@ -112,21 +146,39 @@ RayMemoryDialog::RayMemoryDialog(const QString& packDisplayName, int currentMb, 
     }
     root->addLayout(presetGrid);
 
-    // Custom row.
-    auto* customRow = new QHBoxLayout();
+    // Custom row — slider with a live value label on the right. The label is its own styled
+    // pill so the value never gets clipped by an undersized spinbox (which was the issue with
+    // the previous QSpinBox layout — "6144 Mo" rendered as "6144 M.").
+    auto* customLabelRow = new QHBoxLayout();
     auto* customLabel = new QLabel(tr("Personnalisée"), this);
-    customRow->addWidget(customLabel);
+    QFont customLabelFont = customLabel->font();
+    customLabelFont.setBold(true);
+    customLabel->setFont(customLabelFont);
+    customLabelRow->addWidget(customLabel);
+    customLabelRow->addStretch(1);
+    root->addLayout(customLabelRow);
 
-    m_spinBox = new QSpinBox(this);
-    m_spinBox->setRange(kMinMb, kMaxMb);
-    m_spinBox->setSingleStep(kStepMb);
-    m_spinBox->setSuffix(QStringLiteral(" Mo"));
-    m_spinBox->setValue(qBound(kMinMb, currentMb > 0 ? currentMb : (m_recommendedMb > 0 ? m_recommendedMb : 4096), kMaxMb));
-    connect(m_spinBox, &QSpinBox::editingFinished, this, &RayMemoryDialog::onSpinboxEdited);
-    connect(m_spinBox, qOverload<int>(&QSpinBox::valueChanged), this, [this](int) { m_chosenMb = m_spinBox->value(); });
-    customRow->addStretch(1);
-    customRow->addWidget(m_spinBox);
-    root->addLayout(customRow);
+    auto* sliderRow = new QHBoxLayout();
+    sliderRow->setSpacing(12);
+
+    m_slider = new QSlider(Qt::Horizontal, this);
+    m_slider->setObjectName("raymem-slider");
+    m_slider->setRange(kMinMb, kMaxMb);
+    m_slider->setSingleStep(kStepMb);
+    m_slider->setPageStep(1024);
+    m_slider->setTracking(true);
+    m_slider->setCursor(Qt::PointingHandCursor);
+    const int initialMb = qBound(kMinMb, currentMb > 0 ? currentMb : (m_recommendedMb > 0 ? m_recommendedMb : 4096), kMaxMb);
+    m_slider->setValue(initialMb);
+    connect(m_slider, &QSlider::valueChanged, this, &RayMemoryDialog::onSliderMoved);
+    sliderRow->addWidget(m_slider, 1);
+
+    m_valueLabel = new QLabel(tr("%1 Mo").arg(initialMb), this);
+    m_valueLabel->setObjectName("raymem-value");
+    m_valueLabel->setAlignment(Qt::AlignCenter);
+    sliderRow->addWidget(m_valueLabel);
+
+    root->addLayout(sliderRow);
 
     // Buttons.
     auto* buttonBox = new QDialogButtonBox(this);
@@ -140,8 +192,8 @@ RayMemoryDialog::RayMemoryDialog(const QString& packDisplayName, int currentMb, 
     root->addWidget(buttonBox);
 
     // Initial selection: highlight the preset that matches the current value, otherwise none
-    // (the spinbox already shows the right value).
-    selectPreset(m_spinBox->value());
+    // (the slider already shows the right value via its handle position).
+    selectPreset(m_slider->value());
 }
 
 void RayMemoryDialog::selectPreset(int valueMb)
@@ -154,14 +206,28 @@ void RayMemoryDialog::selectPreset(int valueMb)
 void RayMemoryDialog::onPresetClicked(int valueMb)
 {
     m_chosenMb = valueMb;
-    m_spinBox->blockSignals(true);
-    m_spinBox->setValue(valueMb);
-    m_spinBox->blockSignals(false);
+    // Sync the slider visually but block its signal so we don't re-enter selectPreset() with
+    // a stale notion of "user just dragged" (which would needlessly clear and re-set the same
+    // preset).
+    m_slider->blockSignals(true);
+    m_slider->setValue(valueMb);
+    m_slider->blockSignals(false);
+    m_valueLabel->setText(tr("%1 Mo").arg(valueMb));
     selectPreset(valueMb);
 }
 
-void RayMemoryDialog::onSpinboxEdited()
+void RayMemoryDialog::onSliderMoved(int valueMb)
 {
-    m_chosenMb = m_spinBox->value();
-    selectPreset(m_chosenMb);  // clears all if no preset matches
+    // Snap to step boundaries so the persisted value is always a clean multiple — Qt's slider
+    // only enforces step on keyboard nudges, not drag.
+    const int snapped = (valueMb / kStepMb) * kStepMb;
+    if (snapped != valueMb) {
+        m_slider->blockSignals(true);
+        m_slider->setValue(snapped);
+        m_slider->blockSignals(false);
+    }
+    m_chosenMb = snapped;
+    m_valueLabel->setText(tr("%1 Mo").arg(snapped));
+    // Keep the preset row in sync — exact match → that preset checked, anything else → none.
+    selectPreset(snapped);
 }

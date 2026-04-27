@@ -42,7 +42,11 @@
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-751e8e1\")",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-89708d3\")",
       "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-705a81c\")",
-      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-50f9767\")"
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-50f9767\")",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" run download --repo RayanLhrd/RayLauncher --name \"RayLauncher-Setup-ce6672a\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'fix\\(memory dialog\\): replace cramped spinbox with proper slider + readable value pill *)",
+      "Bash(git push *)"
     ]
   }
 }
