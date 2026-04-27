@@ -177,6 +177,14 @@ void RayModpackUpdater::executeTask()
     m_instanceGroup = APPLICATION->instances()->getInstanceGroup(m_instance->id());
     const QString oldId = m_instance->id();
 
+    // Capture the user's RAM customization so it survives the delete + re-import cycle.
+    // Without this, a friend who bumped their heap from 4 GB to 8 GB via the "Mémoire allouée…"
+    // dialog would silently fall back to Prism's global default (~1 GB) on every update — modded
+    // packs would OOM and the user would have no idea why. See Fix #1.
+    m_savedOverrideMemory = m_instance->settings()->get("OverrideMemory").toBool();
+    m_savedMaxMemMb = m_instance->settings()->get("MaxMemAlloc").toInt();
+    m_savedMinMemMb = m_instance->settings()->get("MinMemAlloc").toInt();
+
     setStatus(tr("Suppression de l'ancienne version…"));
     APPLICATION->instances()->deleteInstance(oldId);
     m_instance.reset();  // drop our shared_ptr so the instance can actually deallocate.
@@ -221,6 +229,22 @@ void RayModpackUpdater::onImportSucceeded()
     // Re-tag with the new version so future update checks work.
     fresh->settings()->set(QStringLiteral("RayLauncher_ModpackId"), m_pack.id);
     fresh->settings()->set(QStringLiteral("RayLauncher_ModpackVersion"), m_pack.version);
+
+    // Restore the user's RAM customization. If they had OverrideMemory turned on with a sane
+    // MaxMemAlloc, that wins. Otherwise fall back to the pack's recommended value so the new
+    // instance still gets an author-tested heap (instead of Prism's anaemic 1 GB default). If
+    // neither applies, leave the fresh instance with its default settings — the install hook
+    // already handles the "fresh install with recommendation" path; we only get here on update.
+    if (m_savedOverrideMemory && m_savedMaxMemMb > 0) {
+        fresh->settings()->set(QStringLiteral("OverrideMemory"), true);
+        fresh->settings()->set(QStringLiteral("MaxMemAlloc"), m_savedMaxMemMb);
+        if (m_savedMinMemMb > 0)
+            fresh->settings()->set(QStringLiteral("MinMemAlloc"), m_savedMinMemMb);
+    } else if (m_pack.recommendedMemoryMb > 0) {
+        fresh->settings()->set(QStringLiteral("OverrideMemory"), true);
+        fresh->settings()->set(QStringLiteral("MaxMemAlloc"), m_pack.recommendedMemoryMb);
+        fresh->settings()->set(QStringLiteral("MinMemAlloc"), m_pack.recommendedMemoryMb);
+    }
 
     // Restore preserved options into the freshly-written options.txt.
     auto mcFresh = std::dynamic_pointer_cast<MinecraftInstance>(fresh);

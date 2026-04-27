@@ -964,6 +964,13 @@ void MainWindow::installRayModpack(const RayModpack& pack)
                             if (inst->name().trimmed() != pack.name.trimmed())
                                 continue;
                             auto settings = inst->settings();
+                            // Idempotency guard: if this instance already carries a catalogue
+                            // tag, leave it alone. Without this guard, two parallel install
+                            // attempts of the same pack (e.g. user retries after a network
+                            // failure) would both fire and the second would clobber the first
+                            // with possibly-stale pack metadata. First writer wins.
+                            if (!settings->get("RayLauncher_ModpackId").toString().isEmpty())
+                                continue;
                             settings->set("RayLauncher_ModpackId", pack.id);
                             settings->set("RayLauncher_ModpackVersion", pack.version);
                             // Author-imposed Java heap. Friends never have to touch the
@@ -995,6 +1002,15 @@ void MainWindow::installRayModpack(const RayModpack& pack)
     RaySimpleProgressDialog dlg(this);
     dlg.setHeadline(tr("Installation de %1…").arg(pack.name));
     dlg.execWithTask(wrapped.get());
+
+    // The successful path already disconnects from inside the lambda once it tags an instance.
+    // For the unsuccessful path (user cancelled mid-download, network failure, mrpack rejected,
+    // etc.), the lambda stays armed and would silently tag whichever future instance happens to
+    // share this pack's name — even one the user creates by hand months later. Hard-disconnect
+    // here covers cancel + fail in one branch.
+    if (!wrapped->wasSuccessful() && *conn) {
+        QObject::disconnect(*conn);
+    }
 }
 
 void MainWindow::playRayInstance(const QString& instanceId)

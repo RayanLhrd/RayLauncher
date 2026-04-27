@@ -146,6 +146,25 @@ RayMemoryDialog::RayMemoryDialog(const QString& packDisplayName, int currentMb, 
     }
     root->addLayout(presetGrid);
 
+    // Off-preset recommendation hint. If the catalogue ships e.g. recommended_memory_mb: 5120
+    // (an odd value not in {4096, 6144, 8192, 10240}), the inline "★ Recommandé" subtitle below
+    // the matching preset never gets attached and the user has no visual cue that the author
+    // recommended anything specific. The slider just lands on 5120 silently. Surface the value
+    // in plain text so it's never invisible.
+    bool recommendationMatchesPreset = false;
+    for (int v : m_presetValuesMb) {
+        if (v == m_recommendedMb) {
+            recommendationMatchesPreset = true;
+            break;
+        }
+    }
+    if (m_recommendedMb > 0 && !recommendationMatchesPreset) {
+        auto* offPresetHint = new QLabel(tr("★ Valeur recommandée par l'auteur : %1 Mo").arg(m_recommendedMb), this);
+        offPresetHint->setStyleSheet(QStringLiteral("color: #5BC85C; font-style: italic;"));
+        offPresetHint->setAlignment(Qt::AlignCenter);
+        root->addWidget(offPresetHint);
+    }
+
     // Custom row — slider with a live value label on the right. The label is its own styled
     // pill so the value never gets clipped by an undersized spinbox (which was the issue with
     // the previous QSpinBox layout — "6144 Mo" rendered as "6144 M.").

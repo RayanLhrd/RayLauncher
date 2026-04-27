@@ -83,6 +83,15 @@ class RayModpackUpdater : public Task {
     QString m_instanceName;
     QString m_instanceGroup;
 
+    // RAM customization captured before the wipe so the user's chosen heap (set via the
+    // "Mémoire allouée…" dialog or auto-applied from the pack's recommendation) survives the
+    // delete + re-import. Without this the fresh instance would fall back to Prism's global
+    // default (~1 GB) and modded packs would silently OOM after every update. See Fix #1 in
+    // the post-audit bug-fix sweep.
+    bool m_savedOverrideMemory = false;
+    int m_savedMaxMemMb = 0;
+    int m_savedMinMemMb = 0;
+
     // Owned by the wrapper task from InstanceList::wrapInstanceTask — we only keep a raw pointer
     // so we can disconnect on abort.
     Task* m_wrappedImport = nullptr;
