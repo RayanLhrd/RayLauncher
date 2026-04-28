@@ -17,9 +17,7 @@
    <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600;&quot;&gt;Add
-       account&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;
-      </string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; font-weight:600;&quot;&gt;Ajouter un compte&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="textFormat">
       <enum>Qt::TextFormat::RichText</enum>
@@ -32,8 +30,7 @@
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>In order to play Minecraft, you must have at least one account logged in. Do you want to log in now?
-      </string>
+      <string>Pour jouer à Minecraft, tu dois être connecté avec au moins un compte. Choisis ci-dessous :</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -50,14 +47,14 @@
    <item>
     <widget class="QPushButton" name="addMicrosoftButton">
      <property name="text">
-      <string>Add Microsoft account</string>
+      <string>Ajouter un compte Microsoft</string>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="addOfflineButton">
      <property name="text">
-      <string>Add Offline account</string>
+      <string>Ajouter un compte hors-ligne</string>
      </property>
     </widget>
    </item>
