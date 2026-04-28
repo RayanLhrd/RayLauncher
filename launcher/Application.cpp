@@ -882,11 +882,16 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // in future, more pages may be added - so this name is chosen to avoid needing migration
         m_settings->registerSetting("WorldManagementGeometry", "");
 
-        m_settings->registerSetting("EnableDiscordRichPresence", false);
-        m_settings->registerSetting("AlwaysShowInDiscord", false);
-        if (m_settings->get("AlwaysShowInDiscord").toBool()) {
-            discord();
-        }
+        // RayLauncher: Discord Rich Presence is mandatory and not user-toggleable. Both gates
+        // default to true and are force-set on every startup so a user who edited settings.cfg
+        // (or a settings.cfg from a pre-RayLauncher install) can't end up with it disabled.
+        // The corresponding UI checkboxes in LauncherPage and MinecraftSettingsWidget are hidden
+        // (see their .ui files) so there's no visible affordance to flip these off either.
+        m_settings->registerSetting("EnableDiscordRichPresence", true);
+        m_settings->registerSetting("AlwaysShowInDiscord", true);
+        m_settings->set("EnableDiscordRichPresence", true);
+        m_settings->set("AlwaysShowInDiscord", true);
+        discord();  // unconditional — AlwaysShowInDiscord is always true now
 
         // HACK: This code feels so stupid is there a less stupid way of doing this?
         {

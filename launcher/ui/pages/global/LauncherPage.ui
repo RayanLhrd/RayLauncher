@@ -168,6 +168,9 @@
        </item>
        <item>
         <widget class="QGroupBox" name="discordBox">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
          <property name="title">
           <string>Discord</string>
          </property>
