@@ -773,10 +773,32 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("ShowConsoleOnError", true);
         m_settings->registerSetting("LogPrePostOutput", true);
 
-        // Window Size
-        m_settings->registerSetting({ "LaunchMaximized", "MCWindowMaximize" }, false);
-        m_settings->registerSetting({ "MinecraftWinWidth", "MCWindowWidth" }, 854);
-        m_settings->registerSetting({ "MinecraftWinHeight", "MCWindowHeight" }, 480);
+        // Window Size — RayLauncher uses bigger defaults than upstream's 854x480. Why: 854x480
+        // is below Minecraft's minimum effective render area for guiScale=3 (which needs at least
+        // 960x720). When MC starts at 854x480, even modpacks shipping `guiScale:3` get silently
+        // clamped to 2 because MC reads+saves options.txt before applying `fullscreen:true`. Our
+        // friends installing modded packs would all see "guiScale=2 even though the pack says 3"
+        // and have no idea why. 1280x720 is comfortably above the threshold and LaunchMaximized
+        // gives whichever monitor they have its full resolution from frame zero. The legacy
+        // MCWindowMaximize / MCWindowWidth / MCWindowHeight aliases stay so settings imported
+        // from a pre-RayLauncher install still resolve.
+        m_settings->registerSetting({ "LaunchMaximized", "MCWindowMaximize" }, true);
+        m_settings->registerSetting({ "MinecraftWinWidth", "MCWindowWidth" }, 1280);
+        m_settings->registerSetting({ "MinecraftWinHeight", "MCWindowHeight" }, 720);
+        // One-shot migration: anyone whose stored values are still the old upstream defaults
+        // (so almost certainly never explicitly chosen by the user) gets bumped to the new
+        // ones too. RayLauncher_WindowDefaultsMigrated guards us from overwriting on every
+        // startup so a user who genuinely picked 854x480 by hand keeps that choice on a
+        // future launch (and any user changing the value later persists normally).
+        m_settings->registerSetting("RayLauncher_WindowDefaultsMigrated", 0);
+        if (m_settings->get("RayLauncher_WindowDefaultsMigrated").toInt() < 1) {
+            if (m_settings->get("MinecraftWinWidth").toInt() == 854 && m_settings->get("MinecraftWinHeight").toInt() == 480) {
+                m_settings->set("MinecraftWinWidth", 1280);
+                m_settings->set("MinecraftWinHeight", 720);
+                m_settings->set("LaunchMaximized", true);
+            }
+            m_settings->set("RayLauncher_WindowDefaultsMigrated", 1);
+        }
 
         // Proxy Settings
         m_settings->registerSetting("ProxyType", "Default");
