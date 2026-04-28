@@ -15,10 +15,11 @@ SetupWizard::SetupWizard(QWidget* parent) : QWizard(parent)
     setObjectName(QStringLiteral("SetupWizard"));
     // Compact starting size: every page in this wizard is "title + short blurb + 2 buttons" so
     // the previous 620x660 left a huge vertical gap below the buttons (especially on the login
-    // page where the user picks Microsoft vs Offline). 540x380 is just enough for the densest
-    // page (auto-Java) without leaving dead space on the simple ones.
-    resize(540, 380);
-    setMinimumSize(300, 320);
+    // page where the user picks Microsoft vs Offline). 480x300 is enough for the page content
+    // (~150px) plus QWizard's header + button bar chrome (~120px in ClassicStyle) without any
+    // dead space.
+    resize(480, 300);
+    setMinimumSize(280, 260);
     // make it ugly everywhere to avoid variability in theming
     setWizardStyle(QWizard::ClassicStyle);
     setOptions(QWizard::NoCancelButton | QWizard::IndependentPages | QWizard::HaveCustomButton1);
