@@ -54,7 +54,7 @@
    <item>
     <widget class="QPushButton" name="addOfflineButton">
      <property name="text">
-      <string>Ajouter un compte hors-ligne</string>
+      <string>Ajouter un compte Gratuit</string>
      </property>
     </widget>
    </item>
