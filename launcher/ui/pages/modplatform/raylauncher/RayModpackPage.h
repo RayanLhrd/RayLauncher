@@ -64,6 +64,13 @@ class RayModpackPage : public QWidget {
     QString installedInstanceIdFor(const RayModpack& pack) const;
     void fetchIcon(RayModpackCard* card, const QUrl& url);
 
+    /// Pings the GitHub Releases API for our own repo, parses the latest tag's version, and
+    /// shows the update banner if it's higher than the running BuildConfig version. Silent
+    /// no-op when updaterEnabled() is false (no PrismUpdater binary shipped in this build),
+    /// when offline, or when the API call fails — we never block the UI for an update check.
+    void checkForLauncherUpdate();
+    void showLauncherUpdateBanner(const QString& latestVersion);
+
     RayModpackIndexFetcher* m_fetcher = nullptr;
 
     QLabel* m_statusLabel = nullptr;
@@ -71,6 +78,13 @@ class RayModpackPage : public QWidget {
     QScrollArea* m_scrollArea = nullptr;
     QWidget* m_tilesContainer = nullptr;
     FlowLayout* m_tilesLayout = nullptr;
+
+    // Banner shown above the tile grid when a newer launcher release exists on GitHub. Hidden
+    // until the version check finishes and reports an upgrade is available — see
+    // checkForLauncherUpdate(). Click the inner button to spawn the PrismUpdater binary via
+    // APPLICATION->triggerUpdateCheck().
+    QWidget* m_updateBanner = nullptr;
+    QLabel* m_updateBannerLabel = nullptr;
 
     // Kept so we can re-attach icons after a rebuild without redownloading — keyed by pack id.
     QHash<QString, QPixmap> m_iconCache;

@@ -174,16 +174,30 @@ set(Launcher_LOGIN_CALLBACK_URL "https://freesmlauncher.org/successful-login" CA
 set(Launcher_FMLLIBS_BASE_URL "https://files.prismlauncher.org/fmllibs/" CACHE STRING "URL for FML Libraries.")
 
 ######## Set version numbers ########
-set(Launcher_VERSION_MAJOR 2)
-set(Launcher_VERSION_MINOR 1)
-set(Launcher_VERSION_PATCH 2)
-set(Launcher_VERSION_CODENAME "Maple")
+# RayLauncher uses its own versioning, starting fresh at 1.0.0 — the inherited
+# "Maple-2.1.2" was upstream Prism's. The PrismUpdater binary (shipped in the
+# installer) compares this against `gh release` tags on Launcher_UPDATER_GITHUB_REPO
+# and offers the user an in-place upgrade when the latest tag's semver is greater.
+# Codename is empty: RayLauncher releases ship as plain "1.0.0" / "1.0.1" / etc.
+set(Launcher_VERSION_MAJOR 1)
+set(Launcher_VERSION_MINOR 0)
+set(Launcher_VERSION_PATCH 0)
+set(Launcher_VERSION_CODENAME "")
 
-set(Launcher_VERSION_NAME "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}")
+# When a codename is set we render "Codename-1.0.0"; when blank (RayLauncher's
+# default) we render "1.0.0" without the dash, matching how `git tag v1.0.0`
+# resolves and what the GitHub Release titles will look like.
+if(Launcher_VERSION_CODENAME STREQUAL "")
+    set(Launcher_VERSION_NAME "${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}")
+    set(Launcher_VERSION_NAME4 "${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}.0")
+    set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_MAJOR},${Launcher_VERSION_MINOR},${Launcher_VERSION_PATCH},0")
+else()
+    set(Launcher_VERSION_NAME "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}")
+    set(Launcher_VERSION_NAME4 "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}.0")
+    set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR},${Launcher_VERSION_MINOR},${Launcher_VERSION_PATCH},0")
+endif()
 set(Launcher_VERSION_NAME_WINDOWS "${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}")
-set(Launcher_VERSION_NAME4 "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}.0")
 set(Launcher_VERSION_NAME4_WINDOWS "${Launcher_VERSION_MAJOR}.${Launcher_VERSION_MINOR}.${Launcher_VERSION_PATCH}.0")
-set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_CODENAME}-${Launcher_VERSION_MAJOR},${Launcher_VERSION_MINOR},${Launcher_VERSION_PATCH},0")
 set(Launcher_VERSION_NAME4_COMMA_WINDOWS "${Launcher_VERSION_MAJOR},${Launcher_VERSION_MINOR},${Launcher_VERSION_PATCH},0")
 
 # Build platform.

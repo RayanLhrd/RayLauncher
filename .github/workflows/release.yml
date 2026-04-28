@@ -1,0 +1,185 @@
+name: Release RayLauncher
+
+# Triggered when a `vX.Y.Z` tag is pushed. Builds the launcher (same recipe as
+# build.yml) and creates a GitHub Release with renamed, human-readable assets:
+#   - RayLauncher-Setup-Windows-X.Y.Z.exe       (NSIS installer for friends)
+#   - RayLauncher-Portable-Windows-X.Y.Z.zip    (no-install bundle)
+#
+# The PrismUpdater binary shipped inside the launcher pings this repo's releases
+# at startup and offers an in-place upgrade when a newer tag exists. The asset
+# filter (BuildConfig.BUILD_ARTIFACT_NAME = "Windows") matches both names above
+# via substring.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re-)release, e.g. v1.0.0"
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-windows-msvc:
+    name: Build + Release (Windows MSVC x64)
+    runs-on: windows-2022
+
+    permissions:
+      # Push to vcpkg NuGet binary cache (same as build.yml).
+      packages: write
+      # Required for `gh release create / upload`.
+      contents: write
+
+    env:
+      INSTALL_DIR: install
+      INSTALL_PORTABLE_DIR: install-portable
+      BUILD_DIR: build
+      BUILD_TYPE: Release
+      ARTIFACT_NAME: Windows
+      BUILD_PLATFORM: official
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # workflow_dispatch may target a different ref than the tag itself —
+          # check out the tag the user named.
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Compute release version
+        id: ver
+        shell: bash
+        run: |
+          # `github.ref_name` is "v1.0.0" for tag pushes; for workflow_dispatch
+          # we read the input. Strip the leading "v" to get "1.0.0".
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building release: $tag (version $version)"
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          aqtversion: "==3.1.*"
+          py7zrversion: ">=0.20.2"
+          version: "6.8.1"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_msvc2022_64"
+          modules: "qt5compat qtimageformats qtnetworkauth"
+          cache: true
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          vsversion: 2022
+          arch: amd64
+
+      - name: Expose VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Set up vcpkg NuGet binary cache
+        shell: pwsh
+        env:
+          USERNAME: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ github.token }}
+          FEED_URL: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        run: |
+          .$(vcpkg fetch nuget) `
+            sources add `
+            -Source "$env:FEED_URL" `
+            -StorePasswordInClearText `
+            -Name GitHubPackages `
+            -UserName "$env:USERNAME" `
+            -Password "$env:GITHUB_TOKEN"
+          .$(vcpkg fetch nuget) `
+            setapikey "$env:GITHUB_TOKEN" `
+            -Source "$env:FEED_URL"
+          "VCPKG_BINARY_SOURCES=clear;nuget,$env:FEED_URL,readwrite" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Install NSIS NScurl plugin
+        shell: pwsh
+        run: |
+          New-Item -Name NSISPlugins -ItemType Directory -Force | Out-Null
+          Invoke-WebRequest https://github.com/negrutiu/nsis-nscurl/releases/download/v24.9.26.122/NScurl.zip -OutFile NSISPlugins\NScurl.zip
+          Expand-Archive -Path NSISPlugins\NScurl.zip -DestinationPath NSISPlugins\NScurl
+
+      - name: Configure CMake (windows_msvc preset)
+        run: cmake --preset windows_msvc
+
+      - name: Build
+        run: cmake --build --preset windows_msvc --config ${{ env.BUILD_TYPE }}
+
+      - name: Install
+        run: cmake --install ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
+
+      - name: Build portable bundle
+        shell: pwsh
+        run: |
+          Copy-Item -Path ${{ env.INSTALL_DIR }} -Destination ${{ env.INSTALL_PORTABLE_DIR }} -Recurse
+          cmake --install ${{ env.BUILD_DIR }} --prefix ${{ env.INSTALL_PORTABLE_DIR }} --component portable
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          cd ${{ env.INSTALL_DIR }}
+          makensis -NOCD "${{ github.workspace }}/${{ env.BUILD_DIR }}/program_info/win_install.nsi"
+
+      - name: Rename release assets
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          # Setup .exe lands at the workspace root after `makensis -NOCD`.
+          $setupSrc = "RayLauncher-Setup.exe"
+          $setupDst = "RayLauncher-Setup-Windows-$env:VERSION.exe"
+          Move-Item -Path $setupSrc -Destination $setupDst -Force
+          Write-Host "Setup asset: $setupDst"
+
+          # Portable: zip the install-portable directory.
+          $portableZip = "RayLauncher-Portable-Windows-$env:VERSION.zip"
+          Compress-Archive -Path "$env:INSTALL_PORTABLE_DIR\*" -DestinationPath $portableZip -CompressionLevel Optimal
+          Write-Host "Portable asset: $portableZip"
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          $setup = "RayLauncher-Setup-Windows-$env:VERSION.exe"
+          $portable = "RayLauncher-Portable-Windows-$env:VERSION.zip"
+
+          # Body: simple markdown, friend-readable. Mention what's inside, link
+          # the changelog (commit list since previous tag).
+          $body = @"
+          ## RayLauncher $env:VERSION pour Windows
+
+          - **$setup** — Installeur classique (recommandé pour la plupart des utilisateurs).
+          - **$portable** — Version portable (zip à décompresser n'importe où).
+
+          ### Quoi de neuf
+          Voir la liste des commits depuis la précédente version :
+          https://github.com/${{ github.repository }}/compare/...$env:TAG
+          "@
+
+          # Create the release if it doesn't exist; otherwise we'll just upload assets to it.
+          $exists = (gh release view $env:TAG --repo "${{ github.repository }}" 2>$null)
+          if (-not $exists) {
+              gh release create $env:TAG `
+                  --repo "${{ github.repository }}" `
+                  --title "RayLauncher $env:VERSION" `
+                  --notes "$body" `
+                  --latest
+          }
+
+          gh release upload $env:TAG $setup $portable `
+              --repo "${{ github.repository }}" `
+              --clobber

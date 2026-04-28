@@ -2,6 +2,11 @@ name: Build RayLauncher
 
 on:
   push:
+    # Tag pushes go through release.yml — don't double-build.
+    branches:
+      - "**"
+    tags-ignore:
+      - "v*"
   workflow_dispatch:
 
 concurrency:
@@ -24,8 +29,11 @@ jobs:
       BUILD_TYPE: Release
       # These two are read by CMakePresets.json via $penv{...}.
       # ARTIFACT_NAME being non-empty is what makes CMakeLists.txt enable the updater binary,
-      # which NSIS expects to find when packaging (raylauncher_updater.exe).
-      ARTIFACT_NAME: Windows-MSVC-Qt6
+      # which NSIS expects to find when packaging (raylauncher_updater.exe). The string itself
+      # is also baked into BuildConfig.BUILD_ARTIFACT_NAME and used by the PrismUpdater to
+      # filter GitHub release assets via substring match — keeping it simple ("Windows") so the
+      # asset names in releases ("RayLauncher-Setup-Windows-1.0.0.exe") cleanly contain it.
+      ARTIFACT_NAME: Windows
       BUILD_PLATFORM: official
 
     steps:
