@@ -55,6 +55,15 @@ QJsonObject makeActivity(qint64 startTime, const QString& details)
         activity["details"] = details;
     activity["timestamps"] = makeActivityTimestamps(startTime);
 
+    // Tell Discord which asset (uploaded on the developer-portal under the configured Application
+    // ID) to render as the big square image on the user's profile. The key matches an asset name
+    // set in the Rich Presence → Art Assets page; if Discord can't resolve it, no image renders
+    // (no fallback, no error). large_text is the tooltip on hover.
+    QJsonObject assets;
+    assets["large_image"] = QStringLiteral("launcher_logo");
+    assets["large_text"] = BuildConfig.LAUNCHER_DISPLAYNAME;
+    activity["assets"] = assets;
+
     return activity;
 }
 
