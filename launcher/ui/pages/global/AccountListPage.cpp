@@ -154,7 +154,7 @@ void AccountListPage::on_actionAddOffline_triggered()
     }
     */
 
-    BaseAccountPtr account = OfflineLoginDialog::newAccount(this, tr("Please enter your desired username to add your offline account."));
+    BaseAccountPtr account = OfflineLoginDialog::newAccount(this, tr("Choisis ton pseudo (visible en multijoueur). Tu pourras le changer plus tard."));
 
     if (account) {
         m_accounts->addAccount(account);

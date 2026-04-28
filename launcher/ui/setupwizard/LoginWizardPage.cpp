@@ -65,7 +65,7 @@ void LoginWizardPage::on_addElybyButton_clicked()
 void LoginWizardPage::on_addOfflineButton_clicked()
 {
     wizard()->hide();
-    auto account = OfflineLoginDialog::newAccount(nullptr, "Please enter your desired username to add your offline account.");
+    auto account = OfflineLoginDialog::newAccount(nullptr, tr("Choisis ton pseudo (visible en multijoueur). Tu pourras le changer plus tard."));
     wizard()->show();
     if (account) {
         APPLICATION->accounts()->addAccount(account);

@@ -11,8 +11,8 @@ OfflineLoginDialog::OfflineLoginDialog(QWidget* parent) : QDialog(parent), ui(ne
     ui->progressBar->setVisible(false);
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
 
-    ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
-    ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("OK"));
+    ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Annuler"));
+    ui->buttonBox->button(QDialogButtonBox::Ok)->setText(tr("Valider"));
 
     // Pre-fill with the last offline pseudo the user typed — saves them re-typing every time
     // they add an account on a second machine or re-add after removing.

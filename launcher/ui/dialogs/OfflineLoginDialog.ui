@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Add Account</string>
+   <string>Ajouter un compte</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -39,7 +39,7 @@
       <number>16</number>
      </property>
      <property name="placeholderText">
-      <string>Username</string>
+      <string>Pseudo</string>
      </property>
     </widget>
    </item>
