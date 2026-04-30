@@ -23,17 +23,18 @@ Quand Rayou push une mise à jour d'un modpack (nouveaux mods, configs, resource
 
 - 🎮 **Catalogue de modpacks intégré** — tous les packs de Rayou affichés en tuiles cliquables au lancement. Un clic = installation, re-clic = Jouer. Zéro config.
 - 🔄 **Mises à jour en un clic** — quand Rayou push, tu vois un badge et un bouton Mettre à jour. Les fichiers du pack sont remplacés, tes préférences perso restent.
-- 🔐 **Compte Microsoft ou offline** — pas besoin de compte Premium pour jouer en LAN ou sur les serveurs du groupe.
-- 🪟 **Fenêtre 16:9 par défaut, interface en français**, sans bazars de tabs/toolbars superflus. Tout passe par la grille de tuiles.
+- 🆙 **Auto-update du launcher** — quand une nouvelle version de RayLauncher sort, un bandeau orange apparaît dans l'onglet Modpacks ; un clic et le launcher se met à jour tout seul. Plus jamais besoin de retélécharger un `.exe`.
+- 🔐 **Compte Microsoft ou Gratuit (offline)** — pas besoin de compte Premium pour jouer en LAN ou sur les serveurs du groupe.
+- 🧠 **RAM préréglée par modpack** — Rayou impose la mémoire allouée par défaut adaptée au pack ; tu peux la rebumper depuis le clic droit (4 / 6 / 8 / 10 Go ou slider perso).
+- 🪟 **Interface en français, look unifié** — pas de bazar de tabs/toolbars superflus, tout passe par la grille de tuiles.
 - 🗑️ **Protection des modpacks officiels** — tu peux supprimer tes instances perso, mais les modpacks du catalogue sont protégés contre la suppression accidentelle.
-- 🖼️ **Animated cat packs, snow, screenshot dans le presse-papier** — hérités de FreesmLauncher.
 
 ## Installation
 
-1. Télécharge `RayLauncher-Setup.exe` depuis la page [Releases](https://github.com/RayanLhrd/RayLauncher/releases) (ou depuis la dernière build [Actions](https://github.com/RayanLhrd/RayLauncher/actions)).
-2. Double-clique. Windows SmartScreen va râler parce que l'exe n'est pas signé — clique **Informations complémentaires → Exécuter quand même**. C'est normal.
-3. Coche la case Desktop Shortcut si tu veux le raccourci sur le bureau.
-4. Lance RayLauncher, ajoute ton compte Minecraft (Microsoft ou Offline), et c'est parti.
+1. **Télécharge l'installeur** : [`RayLauncher-Setup-Windows.exe`](https://github.com/RayanLhrd/RayLauncher/releases/latest/download/RayLauncher-Setup-Windows.exe) (lien direct, redirige toujours vers la dernière version stable).
+2. **Double-clique**. Windows SmartScreen va râler parce que l'exe n'est pas signé — clique **Informations complémentaires → Exécuter quand même**. C'est normal, aucune malice : juste pas de certificat code-signing (~200 €/an, overkill pour distribution à des potes).
+3. Coche la case **Desktop Shortcut** si tu veux le raccourci sur le bureau.
+4. Lance RayLauncher, ajoute ton compte Minecraft (**Microsoft** ou **Gratuit**), et c'est parti.
 
 ## Pour les potes, comment ça marche en pratique
 

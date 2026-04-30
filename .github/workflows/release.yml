@@ -127,14 +127,14 @@ jobs:
 
       - name: Rename release asset
         shell: pwsh
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          # Setup .exe lands at the workspace root after `makensis -NOCD`.
-          $setupSrc = "RayLauncher-Setup.exe"
-          $setupDst = "RayLauncher-Setup-Windows-$env:VERSION.exe"
-          Move-Item -Path $setupSrc -Destination $setupDst -Force
-          Write-Host "Setup asset: $setupDst"
+          # Setup .exe lands at the workspace root after `makensis -NOCD`. We deliberately
+          # rename to a *version-less* name so a single bookmark works across releases:
+          # `https://github.com/<repo>/releases/latest/download/RayLauncher-Setup-Windows.exe`
+          # always redirects to whichever release is currently latest. Friends can pin one
+          # link in Discord and never have to update it.
+          Move-Item -Path "RayLauncher-Setup.exe" -Destination "RayLauncher-Setup-Windows.exe" -Force
+          Write-Host "Setup asset: RayLauncher-Setup-Windows.exe"
 
       - name: Create or update GitHub Release
         shell: pwsh
@@ -143,7 +143,7 @@ jobs:
           TAG: ${{ steps.ver.outputs.tag }}
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          $setup = "RayLauncher-Setup-Windows-$env:VERSION.exe"
+          $setup = "RayLauncher-Setup-Windows.exe"
 
           # Body: simple markdown, friend-readable. Mention what's inside, link
           # the changelog (commit list since previous tag).
