@@ -145,6 +145,12 @@ void DiscordSocket::enqueue(const QByteArray& data, Opcode opcode)
 
 void UnixDiscordSocket::connectSocket()
 {
+    // Reset the pipe index so this method can be called repeatedly (e.g. by
+    // DiscordIntegration's retry timer when Discord wasn't running at startup
+    // but is opened later). Without this reset, m_socketIndex stays at 10 after
+    // the first failed sweep and tryNext() short-circuits to failed() instantly.
+    m_socketIndex = 0;
+    m_socket.abort();
     const QString runtimeDir = QProcessEnvironment::systemEnvironment().value("XDG_RUNTIME_DIR");
     m_path = runtimeDir != "" ? runtimeDir : QDir::tempPath();
     emit tryNext();
@@ -174,6 +180,12 @@ void UnixDiscordSocket::tryNext()
 
 void WinDiscordSocket::connectSocket()
 {
+    // Reset the pipe index so this method can be called repeatedly (e.g. by
+    // DiscordIntegration's retry timer when Discord wasn't running at startup
+    // but is opened later). Without this reset, m_socketIndex stays at 10 after
+    // the first failed sweep and tryNext() short-circuits to failed() instantly.
+    m_socketIndex = 0;
+    m_socket.abort();
     emit tryNext();
 }
 

@@ -43,6 +43,19 @@ DiscordIntegration::DiscordIntegration(bool showAlways)
     connect(m_queue.get(), &DiscordQueue::started, this, &DiscordIntegration::startActivity);
     connect(m_queue.get(), &DiscordQueue::rest, this, &DiscordIntegration::stopActivity);
 
+    // 30 s reconnect timer: if Discord wasn't running when the launcher started
+    // (or it gets restarted later), this retry loop catches it. Stays armed until
+    // a connection succeeds; socketConnected() stops it. Cheap — one local-pipe
+    // dial every 30s.
+    m_reconnectTimer.setInterval(30 * 1000);
+    m_reconnectTimer.setSingleShot(false);
+    connect(&m_reconnectTimer, &QTimer::timeout, this, [this]() {
+        if (!m_socket->isConnected()) {
+            qDebug() << "Retrying Discord connection...";
+            m_socket->connectSocket();
+        }
+    });
+
     m_socket->connectSocket();
 }
 
@@ -80,10 +93,14 @@ void DiscordIntegration::stopActivity()
 void DiscordIntegration::socketConnected()
 {
     qDebug() << "Connected to Discord";
+    m_reconnectTimer.stop();  // we're in — no need to keep dialing
     emit m_queue->socketReady();
 }
 
 void DiscordIntegration::socketFailed()
 {
-    qDebug() << "Couldn't connect to Discord: " << m_socket->errorString();
+    qDebug() << "Couldn't connect to Discord:" << m_socket->errorString() << "— retrying in 30 s.";
+    if (!m_reconnectTimer.isActive()) {
+        m_reconnectTimer.start();
+    }
 }

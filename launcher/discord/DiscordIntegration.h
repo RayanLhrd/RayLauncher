@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QObject>
+#include <QTimer>
 #include "RunningInstance.h"
 
 class BaseInstance;
@@ -52,4 +53,10 @@ class DiscordIntegration : public QObject {
 
     bool m_showAlways;
     qint64 m_startTime;
+
+    // Retry timer for the case where Discord wasn't running when the launcher
+    // started: the initial connectSocket() pass through `discord-ipc-0..9` fails,
+    // and without this timer the launcher would never try again. Fires every 30s
+    // while disconnected and stops itself on socketConnected().
+    QTimer m_reconnectTimer;
 };
