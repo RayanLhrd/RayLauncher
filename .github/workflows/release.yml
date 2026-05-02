@@ -128,13 +128,25 @@ jobs:
       - name: Rename release asset
         shell: pwsh
         run: |
-          # Setup .exe lands at the workspace root after `makensis -NOCD`. We deliberately
-          # rename to a *version-less* name so a single bookmark works across releases:
+          # Setup .exe lands at the workspace root after `makensis -NOCD`. We rename to a
+          # *version-less* name so a single bookmark works across releases:
           # `https://github.com/<repo>/releases/latest/download/RayLauncher-Setup-Windows.exe`
           # always redirects to whichever release is currently latest. Friends can pin one
           # link in Discord and never have to update it.
           Move-Item -Path "RayLauncher-Setup.exe" -Destination "RayLauncher-Setup-Windows.exe" -Force
           Write-Host "Setup asset: RayLauncher-Setup-Windows.exe"
+
+          # Legacy bridge asset: pre-v1.0.0 RayLauncher builds had BuildConfig.BUILD_ARTIFACT_NAME
+          # = "Windows-MSVC-Qt6" (the old upstream-style ARTIFACT_NAME from build.yml). Their
+          # PrismUpdater filters release assets via substring match, so they can't see
+          # "RayLauncher-Setup-Windows.exe" — it doesn't contain "Windows-MSVC-Qt6". To let those
+          # users self-update to a current build instead of having to manually re-install once,
+          # we publish a duplicate alias whose filename does contain the legacy substring. The
+          # binary is bit-identical; this is purely an attic naming bridge. Once everyone has
+          # migrated to a release-built binary (BUILD_ARTIFACT_NAME = "Windows"), we can drop
+          # this step in some far-future cleanup.
+          Copy-Item -Path "RayLauncher-Setup-Windows.exe" -Destination "RayLauncher-Setup-Windows-MSVC-Qt6.exe"
+          Write-Host "Legacy bridge asset: RayLauncher-Setup-Windows-MSVC-Qt6.exe"
 
       - name: Create or update GitHub Release
         shell: pwsh
@@ -167,6 +179,7 @@ jobs:
                   --latest
           }
 
-          gh release upload $env:TAG $setup `
+          $bridge = "RayLauncher-Setup-Windows-MSVC-Qt6.exe"
+          gh release upload $env:TAG $setup $bridge `
               --repo "${{ github.repository }}" `
               --clobber
