@@ -917,6 +917,14 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
             discord();
         }
 
+        // Persistent acknowledgment of the latest seen launcher update. Once the user has
+        // clicked "Mettre à jour" on the in-app banner/popup for a given remote version,
+        // we record that version here and stop pestering them about it — even if the
+        // PrismUpdater install ends up not replacing the running binary (mismatched paths,
+        // user cancelled the wizard, etc.). When a newer version still ships, the recorded
+        // value differs from the new remote and the prompt comes back. Empty by default.
+        m_settings->registerSetting("RayLauncher_AcknowledgedUpdateVersion", "");
+
         // HACK: This code feels so stupid is there a less stupid way of doing this?
         {
             m_settings->registerSetting("PastebinURL", "");

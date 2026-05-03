@@ -71,6 +71,19 @@ class RayModpackPage : public QWidget {
     void checkForLauncherUpdate();
     void showLauncherUpdateBanner(const QString& latestVersion);
 
+    /// Modal popup that pops in front of the user when a new version is detected, so they
+    /// can't miss it. Only fires when the remote version differs from the value persisted
+    /// in `RayLauncher_AcknowledgedUpdateVersion` — once the user has clicked "Mettre à jour"
+    /// on this version (even if the install didn't end up replacing the binary), we won't
+    /// pop up the modal again until a newer remote version ships. The banner above the tile
+    /// grid still appears in that "already-acknowledged" state as a silent reminder.
+    void promptLauncherUpdate(const QString& latestVersion);
+
+    /// Triggers the actual update via the PrismUpdater binary and records the user's
+    /// acknowledgment of @p version so neither the banner nor the modal ever resurface
+    /// for it. Used by both the banner button and the modal's primary action.
+    void acknowledgeAndUpdate(const QString& version);
+
     RayModpackIndexFetcher* m_fetcher = nullptr;
 
     QLabel* m_statusLabel = nullptr;

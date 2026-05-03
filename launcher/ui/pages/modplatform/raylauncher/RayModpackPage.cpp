@@ -17,6 +17,7 @@
 #include <QLabel>
 #include <QLayoutItem>
 #include <QMenu>
+#include <QMessageBox>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QPixmap>
@@ -26,6 +27,8 @@
 #include <QSet>
 #include <QTimer>
 #include <QVBoxLayout>
+
+#include "settings/SettingsObject.h"
 
 #include "Application.h"
 #include "BaseInstance.h"
@@ -81,13 +84,16 @@ RayModpackPage::RayModpackPage(QWidget* parent) : QWidget(parent)
     bannerLayout->addWidget(m_updateBannerLabel, 1);
     auto* updateBtn = new QPushButton(tr("Mettre à jour"), m_updateBanner);
     updateBtn->setCursor(Qt::PointingHandCursor);
-    connect(updateBtn, &QPushButton::clicked, this, []() {
-        // Same hand-off as the menu-bar action: spawns the PrismUpdater binary which
-        // downloads the latest release from GitHub, closes the launcher, applies the
-        // upgrade, and re-launches.
-        APPLICATION->triggerUpdateCheck();
-    });
+    updateBtn->setObjectName("ray-launcher-update-banner-btn");
     bannerLayout->addWidget(updateBtn, 0);
+    // Stash the latest remote version on the button via dynamic property — set in
+    // showLauncherUpdateBanner() once we know it. The click handler reads it back so
+    // acknowledgeAndUpdate() persists the right value.
+    connect(updateBtn, &QPushButton::clicked, this, [this, updateBtn]() {
+        const QString version = updateBtn->property("ray-version").toString();
+        if (!version.isEmpty())
+            acknowledgeAndUpdate(version);
+    });
     m_updateBanner->setVisible(false);
     root->addWidget(m_updateBanner);
 
@@ -405,7 +411,18 @@ void RayModpackPage::checkForLauncherUpdate()
             return;
         if (!isRemoteVersionNewer(BuildConfig.VERSION_MAJOR, BuildConfig.VERSION_MINOR, BuildConfig.VERSION_PATCH, tag))
             return;
+
+        // We have a newer release on GitHub. Decide between two surfaces:
+        //   - Banner only: the user has already clicked "Mettre à jour" for this exact
+        //     version on a previous launch (acknowledged). Don't pop up the modal again,
+        //     just keep a passive reminder on the modpack page.
+        //   - Banner + modal popup: this is the first time the user is being told about
+        //     this specific version. Hit them with a blocking dialog so they can't miss it.
+        const QString acknowledged = APPLICATION->settings()->get("RayLauncher_AcknowledgedUpdateVersion").toString();
         showLauncherUpdateBanner(tag);
+        if (acknowledged != tag) {
+            promptLauncherUpdate(tag);
+        }
     });
 }
 
@@ -417,4 +434,47 @@ void RayModpackPage::showLauncherUpdateBanner(const QString& latestVersion)
         QStringLiteral("%1.%2.%3").arg(BuildConfig.VERSION_MAJOR).arg(BuildConfig.VERSION_MINOR).arg(BuildConfig.VERSION_PATCH);
     m_updateBannerLabel->setText(tr("✨ Une nouvelle version de RayLauncher est dispo : %1 (tu es en %2)").arg(latestVersion, currentVersion));
     m_updateBanner->setVisible(true);
+    // Stash on the click button so the click handler can pass it to acknowledgeAndUpdate().
+    if (auto* btn = m_updateBanner->findChild<QPushButton*>(QStringLiteral("ray-launcher-update-banner-btn"))) {
+        btn->setProperty("ray-version", latestVersion);
+    }
+}
+
+void RayModpackPage::promptLauncherUpdate(const QString& latestVersion)
+{
+    const QString currentVersion =
+        QStringLiteral("%1.%2.%3").arg(BuildConfig.VERSION_MAJOR).arg(BuildConfig.VERSION_MINOR).arg(BuildConfig.VERSION_PATCH);
+
+    QMessageBox box(this);
+    box.setWindowTitle(tr("Mise à jour disponible"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("Une nouvelle version de RayLauncher est disponible.").toHtmlEscaped());
+    box.setInformativeText(tr("Version installée : %1\nVersion disponible : %2\n\n"
+                              "Mettre à jour maintenant ?")
+                               .arg(currentVersion, latestVersion));
+    auto* updateBtn = box.addButton(tr("Mettre à jour maintenant"), QMessageBox::AcceptRole);
+    auto* laterBtn = box.addButton(tr("Plus tard"), QMessageBox::RejectRole);
+    box.setDefaultButton(updateBtn);
+    box.exec();
+    if (box.clickedButton() == updateBtn) {
+        acknowledgeAndUpdate(latestVersion);
+    }
+    // "Plus tard": no acknowledgment write — the modal will fire again on the next launcher
+    // start. The banner stays visible in the meantime as a less-intrusive reminder.
+    Q_UNUSED(laterBtn);
+}
+
+void RayModpackPage::acknowledgeAndUpdate(const QString& version)
+{
+    // Persist the acknowledgment FIRST so even if the PrismUpdater install ends up not
+    // replacing the running binary (different install path, user cancels the wizard, etc.),
+    // the user isn't haunted by the popup on every relaunch. The banner is also dismissed
+    // immediately because it has done its job: the user committed to updating.
+    APPLICATION->settings()->set("RayLauncher_AcknowledgedUpdateVersion", version);
+    if (m_updateBanner)
+        m_updateBanner->setVisible(false);
+    // Hand off to PrismUpdater (downloads the new release, kills this process, runs the
+    // installer, relaunches). On relaunch, BuildConfig.VERSION_* will match `version` and
+    // checkForLauncherUpdate() simply won't show anything.
+    APPLICATION->triggerUpdateCheck();
 }
