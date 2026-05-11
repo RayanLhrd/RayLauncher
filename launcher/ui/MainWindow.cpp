@@ -1041,15 +1041,35 @@ void MainWindow::updateRayModpack(const RayModpack& pack, const QString& instanc
     // mods/configs/resourcepacks the user added manually, plus screenshots and saves, are gone.
     // Comfort settings in options.txt (keybinds, FOV, sensitivity, volumes, GUI scale, etc.)
     // are preserved by the RayModpackUpdater task.
-    const auto choice =
+    auto* box =
         CustomMessageBox::selectable(this, tr("Mettre à jour %1 ?").arg(pack.name),
                                      tr("Cette mise à jour remplace les mods, resource packs, shaders et configs du pack.\n\n"
                                         "Tes paramètres perso (touches, FOV, sensibilité souris, volumes, GUI scale…) sont "
                                         "conservés automatiquement.\n\n"
                                         "⚠️ Les mods que tu aurais ajoutés à la main, ainsi que tes sauvegardes et captures "
                                         "d'écran de cette instance, seront supprimés.\n\nContinuer ?"),
-                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-            ->exec();
+                                     QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    // Style the buttons explicitly so the green accent lands on "Oui" (the forward
+    // action) instead of the default-focused "Non" — the global QSS paints the
+    // default button green, which read as "No = green" before and was confusing for
+    // anyone glancing at the dialog. Inline stylesheets on QMessageBox's standard
+    // buttons override cleanly.
+    if (auto* yesBtn = box->button(QMessageBox::Yes)) {
+        yesBtn->setText(tr("Oui, mettre à jour"));
+        yesBtn->setStyleSheet(QStringLiteral(
+            "QPushButton { background-color: #5BC85C; color: #13181F; border: none;"
+            " border-radius: 6px; padding: 6px 16px; font-weight: 600; min-width: 120px; }"
+            "QPushButton:hover { background-color: #6FD36D; }"
+            "QPushButton:focus { background-color: #5BC85C; outline: none; }"));
+    }
+    if (auto* noBtn = box->button(QMessageBox::No)) {
+        noBtn->setText(tr("Annuler"));
+        noBtn->setStyleSheet(QStringLiteral(
+            "QPushButton { background-color: #1E252F; color: #E6EDF3; border: 1px solid #2A323F;"
+            " border-radius: 6px; padding: 6px 16px; min-width: 90px; }"
+            "QPushButton:hover { border-color: #5BC85C; }"));
+    }
+    const auto choice = box->exec();
     if (choice != QMessageBox::Yes)
         return;
 
