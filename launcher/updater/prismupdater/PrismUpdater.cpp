@@ -1231,9 +1231,18 @@ int PrismUpdaterApp::parseReleasePage(const QByteArray* response)
             release.body = release_obj["body"].toString();
             {
                 QString tag_name = release.tag_name;
-                QRegularExpression re{ "^[a-z]*-" };
+                // Strip a leading "<lowercase>-" prefix (matches upstream Prism's
+                // "release-X.Y.Z" / "stable-X.Y.Z" tag style) OR a leading single "v"
+                // (matches RayLauncher's "vX.Y.Z" tag style). Without the "v" branch,
+                // Version("v1.0.2") parses with a non-numeric first segment and never
+                // compares equal to the BuildConfig integer form, so needUpdate()
+                // returns true forever even when we're already on the latest tag —
+                // the toolbar "Check for Updates" button then re-offers the same
+                // release ad infinitum.
+                QRegularExpression re{ "^([a-z]+-|v)" };
                 QRegularExpressionMatch match = re.match(release.tag_name);
-                tag_name.replace(match.captured(0), "");
+                if (match.hasMatch())
+                    tag_name.replace(match.captured(0), "");
                 release.version = Version(tag_name);
             }
 
