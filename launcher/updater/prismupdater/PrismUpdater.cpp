@@ -350,6 +350,17 @@ PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, ar
     m_printOnly = parser.isSet("list");
     auto user_version = parser.value("install-version");
     if (!user_version.isEmpty()) {
+        // Apply the SAME prefix-strip as parseReleasePage() does for tag_name (see lines
+        // ~1232-1244), otherwise a "v1.0.4" passed on the command line parses to
+        // Version("v1.0.4") with a non-numeric first section, while the matching release
+        // (whose tag_name is also "v1.0.4") parses to Version("1.0.4") because parseReleasePage
+        // strips the "v". The for-loop in run() then never finds an equal Version and bails
+        // with "No release for version!" / "Can not find a github release for specified
+        // version v1.0.4". Normalizing here closes the loop.
+        QRegularExpression re{ "^([a-z]+-|v)" };
+        QRegularExpressionMatch match = re.match(user_version);
+        if (match.hasMatch())
+            user_version.replace(match.captured(0), "");
         m_userSelectedVersion = Version(user_version);
     }
     m_selectUI = parser.isSet("select-ui");

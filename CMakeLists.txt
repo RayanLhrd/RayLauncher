@@ -181,7 +181,7 @@ set(Launcher_FMLLIBS_BASE_URL "https://files.prismlauncher.org/fmllibs/" CACHE S
 # Codename is empty: RayLauncher releases ship as plain "1.0.0" / "1.0.1" / etc.
 set(Launcher_VERSION_MAJOR 1)
 set(Launcher_VERSION_MINOR 0)
-set(Launcher_VERSION_PATCH 4)
+set(Launcher_VERSION_PATCH 5)
 set(Launcher_VERSION_CODENAME "")
 
 # When a codename is set we render "Codename-1.0.0"; when blank (RayLauncher's
