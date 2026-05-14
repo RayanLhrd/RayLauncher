@@ -49,6 +49,10 @@ class RayModpackPage : public QWidget {
     /// Open the "Mémoire allouée" picker for an installed instance. The pack carries the
     /// author's recommendation; the caller resolves the current value from instance.cfg.
     void memoryRequested(const RayModpack& pack, const QString& instanceId);
+    /// Toggle a specific mod on/off for an installed instance. Implemented by MainWindow by
+    /// locating @p jarPattern under `<instance>/.minecraft/mods/` (matches both `*.jar` and
+    /// `*.jar.disabled`) and renaming. No-op silently if the file doesn't exist.
+    void toggleModRequested(const QString& instanceId, const QString& jarPattern, const QString& label);
 
    private slots:
     void onIndexLoaded();

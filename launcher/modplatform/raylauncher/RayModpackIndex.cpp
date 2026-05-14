@@ -81,6 +81,26 @@ void RayModpackIndexFetcher::onDownloadFinished()
             if (obj.contains("recommended_memory_mb"))
                 pack.recommendedMemoryMb = Json::requireIsType<int>(obj, "recommended_memory_mb", "recommended_memory_mb");
 
+            // toggleable_mods: optional array of { label, jar_pattern } objects. Catalogue
+            // authors set this when they want to expose specific mods for the user to flip
+            // on/off from the tile's right-click menu (e.g. SharedRun ↔ vanilla flow).
+            // Silently skip malformed entries rather than failing the whole index parse —
+            // we'd rather lose one toggle than break the modpack listing.
+            if (obj.contains("toggleable_mods")) {
+                QJsonArray toggles = Json::requireIsType<QJsonArray>(obj, "toggleable_mods", "toggleable_mods");
+                for (const QJsonValue& entry : toggles) {
+                    if (!entry.isObject())
+                        continue;
+                    QJsonObject t = entry.toObject();
+                    RayToggleableMod mod;
+                    mod.label = t.value("label").toString();
+                    mod.jarPattern = t.value("jar_pattern").toString();
+                    if (mod.label.isEmpty() || mod.jarPattern.isEmpty())
+                        continue;
+                    pack.toggleableMods.append(mod);
+                }
+            }
+
             if (!pack.mrpackUrl.isValid()) {
                 qWarning() << "Skipping modpack" << pack.id << "- invalid mrpack_url";
                 continue;

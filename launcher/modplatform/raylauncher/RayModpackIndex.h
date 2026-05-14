@@ -25,6 +25,16 @@
 
 #include "net/NetJob.h"
 
+/// One mod that the right-click context menu of an installed tile can toggle on/off.
+/// The launcher locates the jar by glob (e.g. "sharedrun-*.jar") in `<instance>/.minecraft/mods/`
+/// and renames it to `<name>.disabled` to disable, back to `<name>` to enable. The label is
+/// what's shown to the user in the menu ("Activer SharedRun" / "Désactiver SharedRun"); the
+/// pattern matches both `.jar` and `.jar.disabled` so we can detect current state.
+struct RayToggleableMod {
+    QString label;       ///< User-facing name, e.g. "SharedRun"
+    QString jarPattern;  ///< Glob matching the jar filename, e.g. "sharedrun-*.jar"
+};
+
 struct RayModpack {
     QString id;
     QString name;
@@ -37,6 +47,10 @@ struct RayModpack {
     /// field on the index entry; written into MaxMemAlloc/MinMemAlloc + OverrideMemory at
     /// install time so friends never have to touch a settings page.
     int recommendedMemoryMb = 0;
+    /// Optional list of mods the user can toggle from the tile's right-click menu. Pulled
+    /// from the `toggleable_mods` array on the index entry (each element: { label, jar_pattern }).
+    /// Empty by default — only catalogue authors who want to expose per-mod toggles set this.
+    QList<RayToggleableMod> toggleableMods;
 };
 
 class RayModpackIndexFetcher : public QObject {

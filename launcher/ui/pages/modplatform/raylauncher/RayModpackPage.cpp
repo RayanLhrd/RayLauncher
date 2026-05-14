@@ -11,6 +11,7 @@
 #include "RayModpackPage.h"
 
 #include <QAction>
+#include <QDir>
 #include <QHBoxLayout>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -28,6 +29,7 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "minecraft/MinecraftInstance.h"
 #include "settings/SettingsObject.h"
 
 #include "Application.h"
@@ -328,6 +330,29 @@ void RayModpackPage::onCardContextMenu(const RayModpack& pack, const QString& in
 
         auto* memoryAct = menu.addAction(tr("Mémoire allouée…"));
         connect(memoryAct, &QAction::triggered, this, [this, pack, instanceId]() { emit memoryRequested(pack, instanceId); });
+
+        // Per-mod toggle entries — only show when the catalogue exposes some `toggleable_mods`
+        // for this pack AND the jar (or its `.disabled` sibling) actually exists in the
+        // instance's mods folder. The label flips between "Activer" / "Désactiver" based on
+        // current state. Effect takes hold on the next launch; we just rename the file.
+        InstancePtr toggleInst = APPLICATION->instances()->getInstanceById(instanceId);
+        auto mcInst = std::dynamic_pointer_cast<MinecraftInstance>(toggleInst);
+        if (mcInst && !pack.toggleableMods.isEmpty()) {
+            QDir modsDir(mcInst->gameRoot() + QStringLiteral("/mods"));
+            for (const RayToggleableMod& mod : pack.toggleableMods) {
+                const QStringList enabledMatches = modsDir.entryList({ mod.jarPattern }, QDir::Files);
+                const QStringList disabledMatches = modsDir.entryList({ mod.jarPattern + ".disabled" }, QDir::Files);
+                if (enabledMatches.isEmpty() && disabledMatches.isEmpty())
+                    continue;  // mod not present in this instance — skip the entry entirely
+                const bool currentlyEnabled = !enabledMatches.isEmpty();
+                const QString label = currentlyEnabled ? tr("Désactiver %1").arg(mod.label) : tr("Activer %1").arg(mod.label);
+                auto* toggleAct = menu.addAction(label);
+                const QString pattern = mod.jarPattern;
+                const QString modLabel = mod.label;
+                connect(toggleAct, &QAction::triggered, this,
+                        [this, instanceId, pattern, modLabel]() { emit toggleModRequested(instanceId, pattern, modLabel); });
+            }
+        }
 
         auto* folderAct = menu.addAction(tr("Ouvrir le dossier"));
         connect(folderAct, &QAction::triggered, this, [this, instanceId]() { emit openFolderRequested(instanceId); });

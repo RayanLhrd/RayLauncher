@@ -229,6 +229,10 @@ class MainWindow : public QMainWindow {
     void playRayInstance(const QString& instanceId);
     void updateRayModpack(const RayModpack& pack, const QString& instanceId);
     void editRayModpackMemory(const RayModpack& pack, const QString& instanceId);
+    /// Rename a mod jar between `<jar>` and `<jar>.disabled` for an installed instance.
+    /// Pattern matches one of catalogue-declared `toggleable_mods` entries (e.g. "sharedrun-*.jar").
+    /// Effect takes hold on the next launch since MC won't hot-load mods.
+    void toggleRayModpackMod(const QString& instanceId, const QString& jarPattern, const QString& label);
 
    private:
     Ui::MainWindow* ui;

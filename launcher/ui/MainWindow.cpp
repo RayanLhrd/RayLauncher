@@ -46,6 +46,7 @@
 #include "ui_MainWindow.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QUrl>
 #include <QVariant>
@@ -311,6 +312,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     });
     connect(m_modpackPage, &RayModpackPage::updateRequested, this, &MainWindow::updateRayModpack);
     connect(m_modpackPage, &RayModpackPage::memoryRequested, this, &MainWindow::editRayModpackMemory);
+    connect(m_modpackPage, &RayModpackPage::toggleModRequested, this, &MainWindow::toggleRayModpackMod);
     connect(m_modpackPage, &RayModpackPage::openFolderRequested, this, [](const QString& instanceId) {
         InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
         if (!inst)
@@ -1105,6 +1107,63 @@ void MainWindow::editRayModpackMemory(const RayModpack& pack, const QString& ins
     settings->set("OverrideMemory", true);
     settings->set("MaxMemAlloc", chosenMb);
     settings->set("MinMemAlloc", chosenMb);
+}
+
+void MainWindow::toggleRayModpackMod(const QString& instanceId, const QString& jarPattern, const QString& label)
+{
+    InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+    auto mcInst = std::dynamic_pointer_cast<MinecraftInstance>(inst);
+    if (!mcInst) {
+        CustomMessageBox::selectable(this, tr("Erreur"), tr("Instance introuvable."), QMessageBox::Critical)->show();
+        return;
+    }
+    if (mcInst->isRunning()) {
+        CustomMessageBox::selectable(this, tr("Minecraft tourne"),
+                                     tr("Ferme d'abord Minecraft : changer un mod en cours de partie n'aurait aucun effet."),
+                                     QMessageBox::Warning)
+            ->show();
+        return;
+    }
+
+    QDir modsDir(mcInst->gameRoot() + QStringLiteral("/mods"));
+    // Two possible states on disk for the targeted mod:
+    //   - <pattern>.jar          → currently enabled, we flip it to .jar.disabled
+    //   - <pattern>.jar.disabled → currently disabled, we flip it back to .jar
+    // Pick whichever exists. If both somehow exist (manual user fiddling), prefer the enabled
+    // one — the user clicked "Désactiver" intent so disabling wins.
+    const QStringList enabled = modsDir.entryList({ jarPattern }, QDir::Files);
+    const QStringList disabled = modsDir.entryList({ jarPattern + ".disabled" }, QDir::Files);
+    if (enabled.isEmpty() && disabled.isEmpty()) {
+        CustomMessageBox::selectable(this, tr("Mod introuvable"),
+                                     tr("Impossible de trouver le mod %1 dans le dossier mods de l'instance.").arg(label),
+                                     QMessageBox::Warning)
+            ->show();
+        return;
+    }
+
+    bool ok = true;
+    QString newStateMsg;
+    if (!enabled.isEmpty()) {
+        const QString src = modsDir.filePath(enabled.first());
+        const QString dst = src + QStringLiteral(".disabled");
+        ok = QFile::rename(src, dst);
+        newStateMsg = tr("%1 désactivé. L'effet s'applique au prochain lancement.").arg(label);
+    } else {
+        const QString src = modsDir.filePath(disabled.first());
+        QString dst = src;
+        dst.chop(QStringLiteral(".disabled").size());  // drop the trailing ".disabled"
+        ok = QFile::rename(src, dst);
+        newStateMsg = tr("%1 activé. L'effet s'applique au prochain lancement.").arg(label);
+    }
+    if (!ok) {
+        CustomMessageBox::selectable(this, tr("Erreur"),
+                                     tr("Le renommage du jar a échoué (permissions ? fichier verrouillé ?). Essaie de fermer "
+                                        "tous les programmes qui pourraient lire le dossier mods et réessaie."),
+                                     QMessageBox::Critical)
+            ->show();
+        return;
+    }
+    CustomMessageBox::selectable(this, tr("Mod modifié"), newStateMsg, QMessageBox::Information)->show();
 }
 
 void MainWindow::processURLs(QList<QUrl> urls)
