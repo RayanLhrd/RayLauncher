@@ -325,14 +325,51 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         DesktopServices::openPath(path);
     });
     connect(m_modpackPage, &RayModpackPage::deleteRequested, this, [this](const QString& instanceId) {
-        // Select the instance via the hidden InstanceView selection model, then reuse the
-        // existing delete action — which handles the confirmation dialog and the isRunning guard.
-        QModelIndex idx = APPLICATION->instances()->getInstanceIndexById(instanceId);
-        if (!idx.isValid())
+        // Don't reuse on_actionDeleteInstance_triggered() — it reads from m_selectedInstance,
+        // which is only updated via InstanceView selection changes. The view is hidden in our
+        // UI so the selection model never reliably propagates synchronously; calling the
+        // action right after setCurrentIndex() often runs against a stale (nullptr) selection
+        // and silently no-ops. That's the bug a friend hit with a manually-added .mrpack.
+        // Do the delete directly here against the resolved instance.
+        InstancePtr inst = APPLICATION->instances()->getInstanceById(instanceId);
+        if (!inst) {
+            CustomMessageBox::selectable(this, tr("Erreur"), tr("Instance introuvable."), QMessageBox::Critical)->show();
             return;
-        QModelIndex proxyIdx = proxymodel->mapFromSource(idx);
-        view->selectionModel()->setCurrentIndex(proxyIdx, QItemSelectionModel::ClearAndSelect);
-        on_actionDeleteInstance_triggered();
+        }
+        if (inst->isRunning()) {
+            CustomMessageBox::selectable(this, tr("Minecraft tourne"),
+                                         tr("Ferme d'abord Minecraft avant de supprimer cette instance."), QMessageBox::Warning)
+                ->exec();
+            return;
+        }
+        // Reuse the same confirmation dialog wording as the toolbar Delete, just spelled in
+        // French and routed to a direct trashInstance/deleteInstance call.
+        const auto choice =
+            CustomMessageBox::selectable(this, tr("Confirmer la suppression"),
+                                         tr("Tu es sur le point de supprimer « %1 ».\n"
+                                            "Tous les fichiers de cette instance (mondes, mods, configs) seront perdus.\n\n"
+                                            "Continuer ?")
+                                             .arg(inst->name()),
+                                         QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+                ->exec();
+        if (choice != QMessageBox::Yes)
+            return;
+        if (!checkLinkedInstances(instanceId, this, tr("Suppression")))
+            return;
+        // Try the Trash first (recoverable for ~undo window); fall back to hard delete if the
+        // OS-level trash isn't usable (e.g. portable install on a path without recycle bin).
+        if (APPLICATION->instances()->trashInstance(instanceId)) {
+            ui->actionUndoTrashInstance->setEnabled(APPLICATION->instances()->trashedSomething());
+        } else {
+            APPLICATION->instances()->deleteInstance(instanceId);
+        }
+        // Clear the (possibly stale) global selection so any subsequent action doesn't act on
+        // a now-deleted instance.
+        APPLICATION->settings()->set("SelectedInstance", QString());
+        if (m_selectedInstance && m_selectedInstance->id() == instanceId) {
+            m_selectedInstance = nullptr;
+            selectionBad();
+        }
     });
     ui->horizontalLayout->addWidget(m_modpackPage);
 
