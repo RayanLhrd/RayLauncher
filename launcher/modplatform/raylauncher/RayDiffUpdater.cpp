@@ -686,6 +686,20 @@ void RayDiffUpdater::finalizeAndSucceed()
     if (m_instance) {
         m_instance->settings()->set(QStringLiteral("RayLauncher_ModpackId"), m_pack.id);
         m_instance->settings()->set(QStringLiteral("RayLauncher_ModpackVersion"), m_pack.version);
+
+        // CRITICAL — without this, the Modpacks page tile state stays stuck on "Mettre à jour"
+        // forever, because the old (pre-v1.1.0) updater deleted+reimported the instance
+        // (firing `rowsRemoved` + `rowsInserted` on the InstanceList model and triggering
+        // a tile rebuild as a side effect), whereas the diff updater modifies the instance
+        // in place. Settings writes via `set()` don't propagate any signal up to the model,
+        // so the page never re-computes `installedVer != pack.version` after a successful
+        // in-place update — friends keep clicking the orange button thinking nothing happened.
+        //
+        // `setName(name())` is a no-op as far as the persisted name is concerned but
+        // unconditionally emits `BaseInstance::propertiesChanged` → `InstanceList::dataChanged`
+        // → `RayModpackPage::onInstanceListChanged` → `rebuildTiles`, which reads the freshly
+        // set `RayLauncher_ModpackVersion` and flips the tile to "Jouer".
+        m_instance->setName(m_instance->name());
     }
 
     // Clean up the cached .mrpack download.
