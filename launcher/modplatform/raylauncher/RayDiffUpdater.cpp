@@ -375,10 +375,14 @@ bool RayDiffUpdater::buildNewManifestFromMrpack()
             return true;
         }
 
+        // libarchive's readAll() sets *status to ARCHIVE_EOF (= 1) on success-at-end-of-file
+        // and a negative value on actual read errors. Checking `!= 0` would flag EVERY entry
+        // as failed since the final value is never literally zero. We only care about
+        // negative codes here; empty content for an empty file (still EOF) is valid.
         int status = 0;
         QByteArray content = f->readAll(&status);
-        if (status != 0) {
-            qWarning() << "RayDiffUpdater: failed to read override entry" << name;
+        if (status < 0) {
+            qWarning() << "RayDiffUpdater: failed to read override entry" << name << "status=" << status;
             return true;  // skip this one but keep going
         }
 
@@ -557,10 +561,11 @@ void RayDiffUpdater::extractOverrideFiles(const QStringList& destPaths)
         if (!wanted.contains(relPath))
             return true;
 
+        // See note in buildNewManifestFromMrpack — readAll status is EOF on success, not 0.
         int status = 0;
         QByteArray content = f->readAll(&status);
-        if (status != 0) {
-            qWarning() << "RayDiffUpdater: failed to read override for write:" << name;
+        if (status < 0) {
+            qWarning() << "RayDiffUpdater: failed to read override for write:" << name << "status=" << status;
             return true;
         }
 
@@ -587,8 +592,24 @@ void RayDiffUpdater::extractOverrideFiles(const QStringList& destPaths)
 
 void RayDiffUpdater::deleteFilesNoLongerInPack(const QStringList& destPaths)
 {
+    // Files where the player's local copy reflects their preferences, not the pack's
+    // content. If the pack author stops shipping these between two versions, we want to
+    // LEAVE the player's copy alone rather than delete it — they keep their settings,
+    // and MC re-generates from defaults at next launch if they ever delete it manually.
+    static const QSet<QString> kNeverDelete = {
+        QStringLiteral("options.txt"),       QStringLiteral("optionsof.txt"),
+        QStringLiteral("optionsshaders.txt"), QStringLiteral("servers.dat"),
+        QStringLiteral("usercache.json"),    QStringLiteral("usernamecache.json"),
+        QStringLiteral("hotbar.nbt"),         QStringLiteral("realms_persistence.json"),
+    };
+
     const QString root = gameRoot();
     for (const QString& rel : destPaths) {
+        if (kNeverDelete.contains(rel)) {
+            qDebug() << "RayDiffUpdater: keeping player-state file" << rel
+                     << "(pack stopped shipping it, but we don't delete user settings)";
+            continue;
+        }
         const QString abs = FS::PathCombine(root, rel);
         if (QFile::exists(abs)) {
             qDebug() << "RayDiffUpdater: deleting" << abs;
