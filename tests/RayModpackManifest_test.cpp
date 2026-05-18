@@ -129,10 +129,12 @@ class RayModpackManifestTest : public QObject {
 
     void parse_bomStripped()
     {
-        // 3 bytes BOM + "fov:80\n" (7 bytes) = 10 bytes total. The explicit length matters
-        // here because QByteArray's `const char*` ctor stops at the first NUL, and 0xBF isn't
-        // NUL but a defensive explicit-size is clearer.
-        QByteArray withBom = QByteArray("\xEF\xBB\xBFfov:80\n", 10);
+        // 3 bytes BOM + "fov:80\n" (7 bytes) = 10 bytes total. The string literal is split
+        // in two so MSVC doesn't greedily consume the 'f' in "fov" as another hex digit of
+        // the `\xBF` escape sequence (which would be `\xBFf` → out-of-range byte, hard error
+        // under MSVC's C7744). Adjacent string literal concatenation produces the exact same
+        // bytes at compile time.
+        QByteArray withBom = QByteArray("\xEF\xBB\xBF" "fov:80\n", 10);
         auto parsed = RayOptionsMerge::parse(withBom);
         QCOMPARE(parsed.values.value("fov"), QStringLiteral("80"));
     }
