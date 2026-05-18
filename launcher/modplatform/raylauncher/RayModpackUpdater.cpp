@@ -10,6 +10,7 @@
 
 #include "RayModpackUpdater.h"
 
+#include <QDebug>
 #include <QFile>
 #include <QSet>
 #include <QTextStream>
@@ -176,6 +177,14 @@ void RayModpackUpdater::executeTask()
     // with a different version string) fall back to normal preservation.
     const bool forceReset = !m_pack.forceOptionsResetForVersion.isEmpty() &&
                             m_pack.forceOptionsResetForVersion == m_pack.version;
+
+    // Trace the decision so we can debug "the reset didn't fire" reports from `latest.log`
+    // without having to reproduce the bug. The two strings are quoted to make trailing
+    // whitespace or invisible chars obvious if a hand-edited index.json ever introduces them.
+    qDebug() << "RayModpackUpdater: pack.id =" << m_pack.id
+             << "pack.version = \"" << m_pack.version << "\""
+             << "pack.forceOptionsResetForVersion = \"" << m_pack.forceOptionsResetForVersion << "\""
+             << "→ forceReset =" << forceReset;
 
     const QString optionsTxtPath = FS::PathCombine(mcInst->gameRoot(), QStringLiteral("options.txt"));
     if (forceReset) {

@@ -18,10 +18,12 @@
 
 #include "RayModpackIndex.h"
 
+#include <QDateTime>
 #include <QDebug>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QUrlQuery>
 
 #include "Json.h"
 #include "net/Download.h"
@@ -44,8 +46,20 @@ void RayModpackIndexFetcher::fetch()
     m_data->clear();
     m_modpacks.clear();
 
+    // Cache-bust the catalogue fetch. GitHub serves `index.json` with a `Cache-Control:
+    // max-age=300` and Qt's QNetworkAccessManager will happily reuse a stale copy from
+    // its in-memory cache for ~5 min. That's a footgun for one-shot flags like
+    // `force_options_reset_for_version`: if the pack author bumps the version + adds
+    // the flag, a launcher that read the index 2 min ago will still see the OLD JSON
+    // (no flag) when the user clicks "Mettre à jour". Appending a per-fetch query
+    // param defeats both the Qt cache and any CDN caches on the way.
+    QUrl url(m_indexUrl);
+    QUrlQuery query(url);
+    query.addQueryItem(QStringLiteral("t"), QString::number(QDateTime::currentMSecsSinceEpoch()));
+    url.setQuery(query);
+
     NetJob::Ptr job{ new NetJob("RayLauncher modpack index", m_network) };
-    job->addNetAction(Net::Download::makeByteArray(QUrl(m_indexUrl), m_data));
+    job->addNetAction(Net::Download::makeByteArray(url, m_data));
     job->setAskRetry(false);
     connect(job.get(), &NetJob::succeeded, this, &RayModpackIndexFetcher::onDownloadFinished);
     connect(job.get(), &NetJob::failed, this, &RayModpackIndexFetcher::onDownloadFailed);
@@ -112,6 +126,16 @@ void RayModpackIndexFetcher::onDownloadFinished()
                 qWarning() << "Skipping modpack" << pack.id << "- invalid mrpack_url";
                 continue;
             }
+            // Diagnostic: surface what we actually parsed so the bad-release recovery flow can
+            // be debugged from `latest.log`. Without this, when a friend reports "the reset
+            // didn't fire", we have no idea whether the field made it through the parse step
+            // or whether the comparison failed downstream.
+            qDebug() << "RayModpackIndex parsed:" << pack.id
+                     << "version=" << pack.version
+                     << "forceOptionsResetForVersion=" << pack.forceOptionsResetForVersion
+                     << "(force_reset_match=" << (!pack.forceOptionsResetForVersion.isEmpty() &&
+                                                  pack.forceOptionsResetForVersion == pack.version)
+                     << ")";
             parsed.append(pack);
         }
     } catch (const Json::JsonException& e) {
