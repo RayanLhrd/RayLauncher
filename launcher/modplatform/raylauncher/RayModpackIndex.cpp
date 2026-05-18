@@ -81,6 +81,13 @@ void RayModpackIndexFetcher::onDownloadFinished()
             if (obj.contains("recommended_memory_mb"))
                 pack.recommendedMemoryMb = Json::requireIsType<int>(obj, "recommended_memory_mb", "recommended_memory_mb");
 
+            // force_options_reset_for_version: one-time options.txt reset switch (see the
+            // doc comment on the RayModpack field). Stored as-is; the updater compares it
+            // against the running pack version.
+            if (obj.contains("force_options_reset_for_version"))
+                pack.forceOptionsResetForVersion =
+                    Json::requireIsType<QString>(obj, "force_options_reset_for_version", "force_options_reset_for_version");
+
             // toggleable_mods: optional array of { label, jar_pattern } objects. Catalogue
             // authors set this when they want to expose specific mods for the user to flip
             // on/off from the tile's right-click menu (e.g. SharedRun ↔ vanilla flow).

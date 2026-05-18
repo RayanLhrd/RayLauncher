@@ -51,6 +51,14 @@ struct RayModpack {
     /// from the `toggleable_mods` array on the index entry (each element: { label, jar_pattern }).
     /// Empty by default — only catalogue authors who want to expose per-mod toggles set this.
     QList<RayToggleableMod> toggleableMods;
+    /// One-time options.txt reset switch. When set in index.json as
+    /// `"force_options_reset_for_version": "X.Y.Z"`, and the pack's `version` field equals
+    /// this string, `RayModpackUpdater` skips the comfort-keys preservation step on its
+    /// next run — so the freshly-imported `overrides/options.txt` lands untouched on the
+    /// user's instance. Used by pack authors after a botched release where friends'
+    /// instances drifted into a different state than intended. Empty (the default) means
+    /// "behave normally: preserve user keys".
+    QString forceOptionsResetForVersion;
 };
 
 class RayModpackIndexFetcher : public QObject {

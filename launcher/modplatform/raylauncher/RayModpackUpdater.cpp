@@ -167,10 +167,24 @@ void RayModpackUpdater::executeTask()
         return;
     }
 
-    setStatus(tr("Sauvegarde de tes paramètres perso (touches, FOV, volumes…)…"));
+    // One-time force-reset switch from the catalogue. When the author wants to roll back a
+    // botched release (e.g. friends ended up with manually-patched options.txt because an
+    // earlier export was missing defaultoptions), they set
+    // `"force_options_reset_for_version": "<this_version>"` in index.json. We detect that
+    // here and skip the preservation step → the freshly-imported overrides/options.txt
+    // lands on the user's instance untouched. Subsequent versions without the flag (or
+    // with a different version string) fall back to normal preservation.
+    const bool forceReset = !m_pack.forceOptionsResetForVersion.isEmpty() &&
+                            m_pack.forceOptionsResetForVersion == m_pack.version;
 
     const QString optionsTxtPath = FS::PathCombine(mcInst->gameRoot(), QStringLiteral("options.txt"));
-    m_preservedLines = extractPreservedLines(optionsTxtPath);
+    if (forceReset) {
+        setStatus(tr("Reset forcé des paramètres (demandé par l'auteur du pack)…"));
+        m_preservedLines.clear();
+    } else {
+        setStatus(tr("Sauvegarde de tes paramètres perso (touches, FOV, volumes…)…"));
+        m_preservedLines = extractPreservedLines(optionsTxtPath);
+    }
 
     // Capture name + group before we nuke the instance — InstanceImportTask needs them.
     m_instanceName = m_instance->name();
