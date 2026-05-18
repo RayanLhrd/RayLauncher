@@ -630,8 +630,26 @@ void RayDiffUpdater::mergeOptionsTxt()
              << "snapshot_keys =" << m_oldManifest.optionsCanonicalSnapshot.size();
 
     if (m_canonicalOptionsTxt.isEmpty()) {
-        // The .mrpack doesn't ship overrides/options.txt — nothing to merge. Leave whatever's
-        // on disk (could be Minecraft-generated or user-edited).
+        // The .mrpack doesn't ship `overrides/options.txt`. Two sub-cases:
+        //
+        //   1. Pack author runs the `defaultoptions` mod (or equivalent) and intentionally
+        //      doesn't ship options.txt — defaultoptions populates it on first launch from
+        //      `config/defaultoptions/keybindings.txt`. This avoids the MC 1.21
+        //      `client_loaded_correctly` bug where a pre-existing options.txt gets its
+        //      mod-defined keys stripped at startup (because mod KeyMappings register AFTER
+        //      MC has already loaded options.txt). When `force_reset` or Migration mode is
+        //      active, we DELETE the user's stale options.txt so defaultoptions can rebuild
+        //      it fresh on next launch.
+        //   2. Pack truly doesn't ship options.txt and the user wants to keep their own —
+        //      i.e. ordinary NormalDiff with no force_reset → leave the file alone.
+        const bool deleteStaleOptions = forceReset || m_mode == Mode::Migration;
+        if (deleteStaleOptions && QFile::exists(optionsPath)) {
+            qDebug() << "RayDiffUpdater: deleting" << optionsPath
+                     << "so defaultoptions can repopulate from config/defaultoptions/keybindings.txt"
+                     << "(forceReset=" << forceReset << "mode="
+                     << (m_mode == Mode::Migration ? "Migration" : "NormalDiff") << ")";
+            QFile::remove(optionsPath);
+        }
         return;
     }
 
