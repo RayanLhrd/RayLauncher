@@ -53,11 +53,11 @@ struct RayModpack {
     QList<RayToggleableMod> toggleableMods;
     /// One-time options.txt reset switch. When set in index.json as
     /// `"force_options_reset_for_version": "X.Y.Z"`, and the pack's `version` field equals
-    /// this string, `RayModpackUpdater` skips the comfort-keys preservation step on its
-    /// next run — so the freshly-imported `overrides/options.txt` lands untouched on the
-    /// user's instance. Used by pack authors after a botched release where friends'
-    /// instances drifted into a different state than intended. Empty (the default) means
-    /// "behave normally: preserve user keys".
+    /// this string, `RayDiffUpdater` bypasses the smart-merge for options.txt and writes the
+    /// freshly-imported `overrides/options.txt` to disk verbatim. Used by pack authors after
+    /// a botched release where friends' instances drifted into a different state than intended.
+    /// Empty (the default) means "behave normally: smart-merge user customizations against
+    /// the new canonical".
     QString forceOptionsResetForVersion;
 };
 

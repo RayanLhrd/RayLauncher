@@ -103,7 +103,8 @@
 #include "ui/dialogs/IconPickerDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
-#include "modplatform/raylauncher/RayModpackUpdater.h"
+#include "modplatform/raylauncher/RayDiffUpdater.h"
+#include "modplatform/raylauncher/RayModpackManifest.h"
 #include "ui/dialogs/RayMemoryDialog.h"
 #include "ui/pages/modplatform/raylauncher/RayModpackPage.h"
 #include "InstanceImportTask.h"
@@ -1020,6 +1021,27 @@ void MainWindow::installRayModpack(const RayModpack& pack)
                                 settings->set("MaxMemAlloc", pack.recommendedMemoryMb);
                                 settings->set("MinMemAlloc", pack.recommendedMemoryMb);
                             }
+                            // Write the initial diff-updater manifest from what's now on
+                            // disk. Without this, the friend's first "Mettre à jour" click
+                            // would fall into Migration mode and re-download the whole
+                            // .mrpack (~245 MB for the Create pack) just to re-extract the
+                            // same content. With it, the first update is a true diff —
+                            // typically a few MB.
+                            if (auto mc = std::dynamic_pointer_cast<MinecraftInstance>(inst)) {
+                                auto manifest = RayManifestBuilder::buildFromInstalledInstance(
+                                    mc->gameRoot(), mc->instanceRoot(), pack.id, pack.version);
+                                if (manifest.has_value()) {
+                                    if (!manifest->save(mc->gameRoot())) {
+                                        qWarning() << "RayLauncher: install hook failed to save manifest "
+                                                      "for"
+                                                   << pack.id;
+                                    }
+                                } else {
+                                    qDebug() << "RayLauncher: install hook could not build manifest "
+                                                "for"
+                                             << pack.id << "— first update will use Migration mode";
+                                }
+                            }
                             if (*conn)
                                 QObject::disconnect(*conn);
                             return;
@@ -1076,17 +1098,20 @@ void MainWindow::updateRayModpack(const RayModpack& pack, const QString& instanc
         return;
     }
 
-    // The update wipes the instance directory and re-downloads the pack. Surface this clearly —
-    // mods/configs/resourcepacks the user added manually, plus screenshots and saves, are gone.
-    // Comfort settings in options.txt (keybinds, FOV, sensitivity, volumes, GUI scale, etc.)
-    // are preserved by the RayModpackUpdater task.
+    // Since v1.1.0 the updater is differential: only the files the author actually changed
+    // get touched. Player data (saves, screenshots, Xaero maps, JourneyMap, voicechat, etc.)
+    // is left strictly alone. Manually-added mods land in the same "we don't know if it came
+    // from the pack" bucket — they survive if installed pre-v1.1.0 (Migration mode never
+    // deletes), and they survive ongoing diffs unless the new pack ships a different version
+    // at the same path. options.txt is smart-merged: customized keys stay, new canonical keys
+    // (e.g. from a new mod) get added at the bottom on next launch.
     auto* box =
         CustomMessageBox::selectable(this, tr("Mettre à jour %1 ?").arg(pack.name),
-                                     tr("Cette mise à jour remplace les mods, resource packs, shaders et configs du pack.\n\n"
-                                        "Tes paramètres perso (touches, FOV, sensibilité souris, volumes, GUI scale…) sont "
-                                        "conservés automatiquement.\n\n"
-                                        "⚠️ Les mods que tu aurais ajoutés à la main, ainsi que tes sauvegardes et captures "
-                                        "d'écran de cette instance, seront supprimés.\n\nContinuer ?"),
+                                     tr("Cette mise à jour applique seulement les changements de l'auteur :\n"
+                                        "mods/configs/resource packs ajoutés, modifiés ou retirés.\n\n"
+                                        "Tes paramètres perso (touches, FOV, sensibilité, volumes, GUI scale…) sont "
+                                        "conservés.\n\nTes mondes, captures d'écran et données de cartes (Xaero, JourneyMap…) "
+                                        "ne sont JAMAIS touchés.\n\nContinuer ?"),
                                      QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
     // Style the buttons explicitly so the green accent lands on "Oui" (the forward
     // action) instead of the default-focused "Non" — the global QSS paints the
@@ -1112,8 +1137,14 @@ void MainWindow::updateRayModpack(const RayModpack& pack, const QString& instanc
     if (choice != QMessageBox::Yes)
         return;
 
-    // Run the updater through our simplified progress dialog.
-    auto* task = new RayModpackUpdater(pack, inst, this);
+    // Run the differential updater through our simplified progress dialog. RayDiffUpdater
+    // picks the right mode automatically:
+    //   - no manifest on the instance (pre-v1.1.0 installs)  → Migration mode (wipe pack dirs,
+    //     reinstall; player data preserved)
+    //   - manifest present, dependencies match                → NormalDiff (surgical changes)
+    //   - manifest present, MC/loader version differs         → LoaderChange (full reimport
+    //     with player data backup/restore)
+    auto* task = new RayDiffUpdater(pack, inst, this);
     connect(task, &Task::failed, this,
             [this](QString reason) { CustomMessageBox::selectable(this, tr("Erreur"), reason, QMessageBox::Critical)->show(); });
 

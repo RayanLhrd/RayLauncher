@@ -180,8 +180,8 @@ set(Launcher_FMLLIBS_BASE_URL "https://files.prismlauncher.org/fmllibs/" CACHE S
 # and offers the user an in-place upgrade when the latest tag's semver is greater.
 # Codename is empty: RayLauncher releases ship as plain "1.0.0" / "1.0.1" / etc.
 set(Launcher_VERSION_MAJOR 1)
-set(Launcher_VERSION_MINOR 0)
-set(Launcher_VERSION_PATCH 9)
+set(Launcher_VERSION_MINOR 1)
+set(Launcher_VERSION_PATCH 0)
 set(Launcher_VERSION_CODENAME "")
 
 # When a codename is set we render "Codename-1.0.0"; when blank (RayLauncher's
